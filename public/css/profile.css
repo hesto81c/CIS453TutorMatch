@@ -1,0 +1,311 @@
+.profile-page-wrapper {
+  max-width: 800px;
+  margin: 32px auto;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Profile header card ── */
+.profile-header-card {
+  background: white;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 4px 20px rgba(0,14,84,0.07);
+  border-top: 4px solid #F76900;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.profile-big-avatar {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #000E54, #0022aa);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+  border: 3px solid rgba(247,105,0,0.3);
+}
+
+.profile-header-info { flex: 1; }
+
+.profile-header-info h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #000E54;
+  margin-bottom: 4px;
+}
+
+.profile-header-info p {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.profile-role-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #fff3eb, #ffe8d6);
+  color: #F76900;
+  border: 1px solid rgba(247,105,0,0.3);
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.verified-tag {
+  display: inline-block;
+  background: #eafaf1;
+  color: #27ae60;
+  border: 1px solid rgba(39,174,96,0.3);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+/* ── Section cards ── */
+.profile-section {
+  background: white;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 4px 20px rgba(0,14,84,0.07);
+  border-left: 4px solid #F76900;
+}
+
+.profile-section h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #000E54;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+/* ── Form fields ── */
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-form .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-form .input-group label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #000E54;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-form input,
+.profile-form textarea {
+  padding: 11px 14px;
+  border: 2px solid #e0e4ef;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  color: #222;
+  background: #fafbff;
+  font-family: inherit;
+}
+
+.profile-form input:focus,
+.profile-form textarea:focus {
+  border-color: #F76900;
+  box-shadow: 0 0 0 3px rgba(247,105,0,0.1);
+  background: white;
+}
+
+.profile-form textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.btn-save {
+  align-self: flex-start;
+  padding: 11px 28px;
+  background: linear-gradient(135deg, #F76900, #e05e00);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  box-shadow: 0 4px 14px rgba(247,105,0,0.35);
+}
+
+.btn-save:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* ── Courses list ── */
+.courses-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.course-manage-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f4f6fb;
+  border-radius: 10px;
+  border-left: 3px solid #F76900;
+}
+
+.course-manage-code {
+  font-weight: 700;
+  color: #F76900;
+  font-size: 0.9rem;
+  min-width: 80px;
+}
+
+.course-manage-name {
+  flex: 1;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.course-manage-meta {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.btn-delete-course {
+  background: white;
+  color: #e74c3c;
+  border: 2px solid #e74c3c;
+  border-radius: 8px;
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-delete-course:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+/* ── Add course form ── */
+.add-course-form {
+  background: #f4f6fb;
+  border-radius: 14px;
+  padding: 20px;
+  border: 2px dashed #e0e4ef;
+}
+
+.add-course-form h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #000E54;
+  margin-bottom: 14px;
+}
+
+.course-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.course-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.add-course-form input {
+  padding: 10px 12px;
+  border: 2px solid #e0e4ef;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  outline: none;
+  background: white;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.add-course-form input:focus {
+  border-color: #F76900;
+}
+
+.btn-add-course {
+  padding: 10px 20px;
+  background: #000E54;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-add-course:hover { opacity: 0.85; }
+
+/* ── Student info grid ── */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.info-item label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #F76900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.info-item p {
+  font-size: 0.95rem;
+  color: #333;
+  font-weight: 500;
+}
+
+/* ── Save feedback ── */
+.save-feedback {
+  font-size: 0.85rem;
+  padding: 8px 14px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.save-feedback.success {
+  background: #eafaf1;
+  color: #27ae60;
+  border-left: 3px solid #27ae60;
+}
+
+.save-feedback.error {
+  background: #fdecea;
+  color: #e74c3c;
+  border-left: 3px solid #e74c3c;
+}

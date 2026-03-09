@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TutorMatch — Create Account</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="page-wrapper">
+
+    <div class="left-panel">
+      <div class="brand">
+        <div class="logo-circle"><img src="/logo.png" alt="TutorMatch"></div>
+        <h1>
+          <span style="color:#ffffff;font-weight:800;">Tutor</span><span style="color:#F76900;font-weight:800;">Match</span>
+        </h1>
+        <p>Join thousands of students and tutors already on the platform.</p>
+      </div>
+      <div class="features">
+        <div class="feature-item">
+          <span class="icon">🎓</span>
+          <span>Students — find course-specific help</span>
+        </div>
+        <div class="feature-item">
+          <span class="icon">📚</span>
+          <span>Tutors — earn money sharing your knowledge</span>
+        </div>
+        <div class="feature-item">
+          <span class="icon">✅</span>
+          <span>Verified grades build trust instantly</span>
+        </div>
+        <div class="feature-item">
+          <span class="icon">🔒</span>
+          <span>Your data is always encrypted and safe</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="form-card">
+        <div class="form-header">
+          <h2>Create your account</h2>
+          <p>It only takes 30 seconds</p>
+        </div>
+
+        <div class="role-selector">
+          <p>I want to join as:</p>
+          <div class="role-buttons">
+            <button class="role-btn active" data-role="student">🎓 Student</button>
+            <button class="role-btn" data-role="tutor">📚 Tutor</button>
+          </div>
+        </div>
+
+        <form id="registerForm">
+          <input type="hidden" id="roleInput" name="role" value="student">
+
+          <div class="input-group">
+            <label for="full_name">Full name</label>
+            <input type="text" id="full_name" name="full_name"
+              placeholder="John Smith" required />
+          </div>
+
+          <div class="input-group">
+            <label for="email">University email</label>
+            <input type="email" id="email" name="email"
+              placeholder="you@syr.edu" required />
+            <span class="input-hint">Only .edu emails are accepted</span>
+          </div>
+
+          <div class="input-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password"
+              placeholder="At least 6 characters" required />
+          </div>
+
+          <div class="input-group">
+            <label for="confirm_password">Confirm password</label>
+            <input type="password" id="confirm_password"
+              placeholder="Repeat your password" required />
+          </div>
+
+          <button type="submit" class="btn-primary">Create account</button>
+          <div id="errorMsg"   class="error-msg hidden"></div>
+          <div id="successMsg" class="success-msg hidden"></div>
+        </form>
+
+        <div class="form-footer">
+          Already have an account? <a href="/">Sign in here</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <script src="/js/register.js"></script>
+</body>
+</html>

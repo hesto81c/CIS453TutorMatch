@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TutorMatch — Messages</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/messages.css">
+  <link rel="stylesheet" href="/css/notifications.css">
+</head>
+<body class="app-body">
+
+  <div class="top-stripe"></div>
+
+  <nav class="topnav">
+    <div class="topnav-left">
+      <div class="logo-circle small"><img src="/logo.png" alt="TutorMatch"></div>
+      <span class="nav-brand">
+        <span style="color:#ffffff;font-weight:800;">Tutor</span><span style="color:#F76900;font-weight:800;">Match</span>
+      </span>
+    </div>
+    <div class="topnav-right">
+      <span class="nav-user">👤 <span id="navUserName">...</span></span>
+      <span class="nav-role" id="navUserRole"></span>
+      <a href="/logout" class="nav-logout">Log out</a>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-circle small"><img src="/logo.png" alt="TutorMatch"></div>
+        <span>
+          <span style="color:#ffffff;font-weight:800;">Tutor</span><span style="color:#F76900;font-weight:800;">Match</span>
+        </span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/dashboard" class="sidebar-item">
+          <span class="s-icon">🔍</span> Find a Tutor
+        </a>
+        <a href="/bookings" class="sidebar-item">
+          <span class="s-icon">📅</span> My Bookings
+        </a>
+        <a href="/messages" class="sidebar-item active">
+          <span class="s-icon">💬</span> Messages
+        </a>
+        <a href="/notifications" class="sidebar-item" id="notifLink">
+          <span class="s-icon">🔔</span> Notifications
+          <span class="notif-badge hidden" id="sidebarBadge"></span>
+        </a>
+        <a href="/tutor-dashboard" class="sidebar-item" id="tutorDashLink" style="display:none">
+          <span class="s-icon">🎓</span> Tutor Dashboard
+        </a>
+        <a href="/profile" class="sidebar-item">
+          <span class="s-icon">👤</span> My Profile
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        Syracuse University<br>
+        <span>#OrangeNation</span>
+      </div>
+    </aside>
+
+    <main class="main-content" style="padding:24px;">
+      <div class="messages-layout">
+        <div class="conversations-panel">
+          <div class="conversations-header">
+            <h2>💬 Messages</h2>
+            <p>Your active sessions</p>
+          </div>
+          <div class="conversations-list" id="conversationsList">
+            <div style="padding:20px;text-align:center;color:#aaa;font-size:0.85rem;">Loading...</div>
+          </div>
+        </div>
+        <div class="chat-panel" id="chatPanel">
+          <div class="chat-empty-state">
+            <div class="icon">💬</div>
+            <h3>Select a conversation</h3>
+            <p>Choose a booking from the left to start chatting with your tutor or student.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="app-footer">
+    🍊 <span>#OrangeNation</span> · Syracuse University · tutormatch.syr.edu
+  </footer>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/messages.js"></script>
+</body>
+</html>

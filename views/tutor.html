@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TutorMatch — Tutor Profile</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/tutor.css">
+  <link rel="stylesheet" href="/css/bookings.css">
+  <link rel="stylesheet" href="/css/notifications.css">
+</head>
+<body class="app-body">
+
+  <div class="top-stripe"></div>
+
+  <nav class="topnav">
+    <div class="topnav-left">
+      <div class="logo-circle small"><img src="/logo.png" alt="TutorMatch"></div>
+      <span class="nav-brand">
+        <span style="color:#ffffff;font-weight:800;">Tutor</span><span style="color:#F76900;font-weight:800;">Match</span>
+      </span>
+    </div>
+    <div class="topnav-right">
+      <span class="nav-user">👤 <span id="navUserName">...</span></span>
+      <span class="nav-role" id="navUserRole"></span>
+      <a href="/logout" class="nav-logout">Log out</a>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-circle small"><img src="/logo.png" alt="TutorMatch"></div>
+        <span>
+          <span style="color:#ffffff;font-weight:800;">Tutor</span><span style="color:#F76900;font-weight:800;">Match</span>
+        </span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/dashboard" class="sidebar-item active">
+          <span class="s-icon">🔍</span> Find a Tutor
+        </a>
+        <a href="/bookings" class="sidebar-item">
+          <span class="s-icon">📅</span> My Bookings
+        </a>
+        <a href="/messages" class="sidebar-item">
+          <span class="s-icon">💬</span> Messages
+        </a>
+        <a href="/notifications" class="sidebar-item" id="notifLink">
+          <span class="s-icon">🔔</span> Notifications
+          <span class="notif-badge hidden" id="sidebarBadge"></span>
+        </a>
+        <a href="/tutor-dashboard" class="sidebar-item" id="tutorDashLink" style="display:none">
+          <span class="s-icon">🎓</span> Tutor Dashboard
+        </a>
+        <a href="/profile" class="sidebar-item">
+          <span class="s-icon">👤</span> My Profile
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        Syracuse University<br>
+        <span>#OrangeNation</span>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div id="tutorContent">
+        <p style="text-align:center;padding:40px;color:#888;">Loading tutor profile...</p>
+      </div>
+      <div id="reviewsSection" class="reviews-section hidden">
+        <h2>⭐ Student Reviews</h2>
+        <div id="reviewsAvg"></div>
+        <div id="reviewsList"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Booking Modal -->
+  <div id="bookingModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📅 Book a Session</h2>
+        <button class="modal-close" id="closeModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tutor-info">
+          <div class="modal-avatar" id="modalAvatar"></div>
+          <div>
+            <div class="modal-tutor-name" id="modalTutorName"></div>
+            <div class="modal-tutor-rate" id="modalTutorRate"></div>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.82rem;font-weight:700;color:#000E54;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Session Type</label>
+          <div class="session-type-selector">
+            <div class="session-type-btn active" data-type="one_on_one">
+              <span class="session-icon">👤</span>
+              <span class="session-label">1-on-1</span>
+              <span class="session-desc">Private session just for you</span>
+            </div>
+            <div class="session-type-btn" data-type="group">
+              <span class="session-icon">👥</span>
+              <span class="session-label">Group</span>
+              <span class="session-desc">Study with other students</span>
+            </div>
+            <div class="session-type-btn" data-type="resources">
+              <span class="session-icon">📚</span>
+              <span class="session-label">Resources</span>
+              <span class="session-desc">Notes, slides & study guides</span>
+            </div>
+          </div>
+        </div>
+        <div id="resourcesNote" class="resources-note hidden">
+          <span>📬</span>
+          <p>The tutor will share study materials with you after confirming this request. No date needed!</p>
+        </div>
+        <div class="input-group" id="courseGroup">
+          <label>Course</label>
+          <select id="modalCourse"></select>
+        </div>
+        <div class="input-group" id="dateGroup">
+          <label>Date & Time</label>
+          <input type="datetime-local" id="modalDate" />
+        </div>
+        <div class="input-group">
+          <label>Message (optional)</label>
+          <textarea id="modalMessage" placeholder="Anything the tutor should know..."></textarea>
+        </div>
+        <div id="bookingFeedback" style="display:none;padding:10px 14px;border-radius:8px;font-size:0.88rem;font-weight:600;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel-modal" id="cancelModal">Cancel</button>
+        <button class="btn-confirm-booking" id="confirmBooking">Confirm Booking</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    🍊 <span>#OrangeNation</span> · Syracuse University · tutormatch.syr.edu
+  </footer>
+
+  <script src="/js/tutor.js"></script>
+</body>
+</html>

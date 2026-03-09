@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TutorMatch — Tutor Dashboard</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dashboard.css">
+  <link rel="stylesheet" href="/css/bookings.css">
+  <link rel="stylesheet" href="/css/notifications.css">
+</head>
+<body class="app-body">
+
+  <div class="top-stripe"></div>
+
+  <nav class="topnav">
+    <div class="topnav-left">
+      <div class="logo-circle small"><img src="/logo.png" alt="TutorMatch"></div>
+      <span class="nav-brand">
+        <span style="color:#ffffff;font-weight:800;">Tutor</span><span style="color:#F76900;font-weight:800;">Match</span>
+      </span>
+    </div>
+    <div class="topnav-right">
+      <span class="nav-user">👤 <span id="navUserName">...</span></span>
+      <span class="nav-role" id="navUserRole"></span>
+      <a href="/logout" class="nav-logout">Log out</a>
+    </div>
+  </nav>
+
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-circle small"><img src="/logo.png" alt="TutorMatch"></div>
+        <span>
+          <span style="color:#ffffff;font-weight:800;">Tutor</span><span style="color:#F76900;font-weight:800;">Match</span>
+        </span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/dashboard" class="sidebar-item">
+          <span class="s-icon">🔍</span> Find a Tutor
+        </a>
+        <a href="/bookings" class="sidebar-item">
+          <span class="s-icon">📅</span> My Bookings
+        </a>
+        <a href="/messages" class="sidebar-item">
+          <span class="s-icon">💬</span> Messages
+        </a>
+        <a href="/notifications" class="sidebar-item" id="notifLink">
+          <span class="s-icon">🔔</span> Notifications
+          <span class="notif-badge hidden" id="sidebarBadge"></span>
+        </a>
+        <a href="/tutor-dashboard" class="sidebar-item active">
+          <span class="s-icon">🎓</span> Tutor Dashboard
+        </a>
+        <a href="/profile" class="sidebar-item">
+          <span class="s-icon">👤</span> My Profile
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        Syracuse University<br>
+        <span>#OrangeNation</span>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="bookings-header">
+        <h1>Tutor Dashboard</h1>
+        <p>Manage your incoming session requests</p>
+      </div>
+      <div id="statsRow" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;"></div>
+
+      <div style="margin-bottom:16px;">
+        <h2 style="font-size:1.1rem;font-weight:700;color:#000E54;margin-bottom:4px;">⏳ Pending Requests</h2>
+        <p style="font-size:0.88rem;color:#888;">These students are waiting for your response</p>
+      </div>
+      <div id="pendingList" class="bookings-list" style="margin-bottom:32px;"></div>
+      <div id="pendingEmpty" class="hidden" style="text-align:center;padding:30px;color:#888;background:white;border-radius:16px;margin-bottom:32px;">
+        <div style="font-size:3rem;margin-bottom:12px;">🎉</div>
+        <p style="font-weight:700;color:#000E54;">No pending requests!</p>
+        <p style="font-size:0.88rem;margin-top:4px;">You're all caught up.</p>
+      </div>
+
+      <div id="confirmedSection" class="hidden" style="margin-bottom:32px;">
+        <div style="margin-bottom:16px;">
+          <h2 style="font-size:1.1rem;font-weight:700;color:#000E54;margin-bottom:4px;">✅ Confirmed Sessions</h2>
+          <p style="font-size:0.88rem;color:#888;">Mark sessions as complete after they happen</p>
+        </div>
+        <div id="confirmedList" class="bookings-list"></div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <h2 style="font-size:1.1rem;font-weight:700;color:#000E54;margin-bottom:4px;">📋 Completed & Declined</h2>
+        <p style="font-size:0.88rem;color:#888;">Your full booking history</p>
+      </div>
+      <div id="allList" class="bookings-list"></div>
+      <div id="allEmpty" class="hidden" style="text-align:center;padding:30px;color:#888;background:white;border-radius:16px;">
+        <p>No booking history yet.</p>
+      </div>
+    </main>
+  </div>
+
+  <footer class="app-footer">
+    🍊 <span>#OrangeNation</span> · Syracuse University · tutormatch.syr.edu
+  </footer>
+
+  <script src="/js/tutor-dashboard.js"></script>
+</body>
+</html>
