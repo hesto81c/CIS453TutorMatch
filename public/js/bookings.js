@@ -1,9 +1,9 @@
-// ── My Bookings page ─────────────────────────────────────────────────
+// My Bookings page
 
 const sessionTypeLabels = {
   one_on_one: '👤 1-on-1',
-  group:      '👥 Group',
-  resources:  '📚 Resources'
+  group: '👥 Group',
+  resources: '📚 Resources'
 };
 
 fetch('/api/me')
@@ -36,25 +36,38 @@ fetch('/api/bookings')
 
     list.innerHTML = bookings.map(b => {
       console.log(`Booking ${b.id}: status=${b.status}, payment_status=${b.payment_status}, hourly_rate=${b.hourly_rate}`);
-      
-      const date    = new Date(b.scheduled_at);
-      const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+      const date = new Date(b.scheduled_at);
+      const dateStr = date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
       const statusLabel = {
-        pending:   '⏳ Pending',
+        pending: '⏳ Pending',
         confirmed: '✅ Confirmed',
         cancelled: '❌ Cancelled',
         completed: '🎓 Completed'
       }[b.status] || b.status;
 
       const sessionLabel = sessionTypeLabels[b.session_type] || '👤 1-on-1';
-      const canCancel    = b.status === 'pending';
-      const canReview    = b.status === 'completed';
-      const canPay       = b.status === 'confirmed' && (!b.payment_status || b.payment_status === 'pending');
-      const isResources  = b.session_type === 'resources';
 
-      console.log(`Booking ${b.id} - canPay: ${canPay} (status: ${b.status}, payment_status: ${b.payment_status})`);
+      const canCancel = b.status === 'pending';
+      const canReview = b.status === 'completed';
+
+      const canPay = b.status === 'confirmed' &&
+                    (!b.payment_status || b.payment_status === 'pending' || b.payment_status === 'unpaid');
+
+      const isResources = b.session_type === 'resources';
+      const paymentStatus = b.payment_status || 'pending';
+
+      console.log(`Booking ${b.id} - canPay: ${canPay} (status: ${b.status}, payment_status: ${paymentStatus})`);
 
       return `
         <div class="booking-card status-${b.status}" id="booking-${b.id}">
@@ -71,21 +84,44 @@ fetch('/api/bookings')
               $${parseFloat(b.hourly_rate).toFixed(2)}/hr
               ${b.is_verified ? '· ✅ Verified Tutor' : ''}
             </div>
-            ${b.payment_status && b.payment_status !== 'pending' ? `<div style="font-size:0.8rem;color:#27ae60;margin-top:4px;font-weight:600;">💳 Payment: ${b.payment_status}</div>` : ''}
+            ${paymentStatus === 'paid' ?
+              `<div style="font-size:0.8rem;color:#27ae60;margin-top:4px;font-weight:600;">
+                 💳 Payment: Paid
+               </div>` :
+              paymentStatus === 'unpaid' || paymentStatus === 'pending' ?
+              `<div style="font-size:0.8rem;color:#f39c12;margin-top:4px;font-weight:600;">
+                 💳 Payment: Pending
+               </div>` : ''
+            }
           </div>
           <div class="booking-right">
             <span class="status-badge ${b.status}">${statusLabel}</span>
             ${canCancel ? `<button class="btn-cancel-booking" onclick="cancelBooking(${b.id})">Cancel</button>` : ''}
-            ${canPay ? `<button class="btn-pay-booking" onclick="openPaymentModal(${b.id}, '${b.tutor_name.replace(/'/g, "\\'")}', ${b.hourly_rate})">💳 Pay Now</button>` : ''}
-            ${canReview ? `<button class="btn-submit-review" onclick="toggleReviewForm(${b.id})" id="reviewBtn-${b.id}">⭐ Leave Review</button>` : ''}
+            ${canPay ? `
+              <button class="btn-pay-booking" onclick="openPaymentModal(
+                ${b.id}, 
+                '${b.tutor_name.replace(/'/g, "\\'")}', 
+                ${b.hourly_rate}
+              )">
+                💳 Pay Now
+              </button>
+            ` : ''}
+            ${canReview ? `
+              <button class="btn-submit-review" onclick="toggleReviewForm(${b.id})" id="reviewBtn-${b.id}">
+                ⭐ Leave Review
+              </button>
+            ` : ''}
           </div>
         </div>
         ${canReview ? `
           <div id="reviewForm-${b.id}" class="review-form-card hidden">
             <h4>⭐ Rate your session with ${b.tutor_name}</h4>
             <div class="star-picker" id="stars-${b.id}">
-              <span data-val="1">★</span><span data-val="2">★</span>
-              <span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+              <span data-val="1">★</span>
+              <span data-val="2">★</span>
+              <span data-val="3">★</span>
+              <span data-val="4">★</span>
+              <span data-val="5">★</span>
             </div>
             <textarea id="comment-${b.id}" placeholder="Share your experience (optional)..."></textarea>
             <br>
@@ -100,7 +136,7 @@ fetch('/api/bookings')
       let selected = 0;
       picker.querySelectorAll('span').forEach(star => {
         star.addEventListener('mouseover', () => highlightStars(picker, parseInt(star.dataset.val)));
-        star.addEventListener('mouseout',  () => highlightStars(picker, selected));
+        star.addEventListener('mouseout', () => highlightStars(picker, selected));
         star.addEventListener('click', () => {
           selected = parseInt(star.dataset.val);
           picker.dataset.rating = selected;
@@ -125,9 +161,9 @@ function toggleReviewForm(id) {
 }
 
 async function submitReview(bookingId) {
-  const picker   = document.getElementById(`stars-${bookingId}`);
-  const rating   = parseInt(picker.dataset.rating || 0);
-  const comment  = document.getElementById(`comment-${bookingId}`).value;
+  const picker = document.getElementById(`stars-${bookingId}`);
+  const rating = parseInt(picker.dataset.rating || 0);
+  const comment = document.getElementById(`comment-${bookingId}`).value;
   const feedback = document.getElementById(`reviewFeedback-${bookingId}`);
 
   if (!rating) {
@@ -137,7 +173,7 @@ async function submitReview(bookingId) {
   }
 
   try {
-    const res  = await fetch('/api/reviews', {
+    const res = await fetch('/api/reviews', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ booking_id: bookingId, rating, comment })
@@ -181,29 +217,28 @@ function cancelBooking(id) {
 // Payment Modal Functions
 function openPaymentModal(bookingId, tutorName, hourlyRate) {
   console.log('Opening payment modal for:', { bookingId, tutorName, hourlyRate });
-  
+
   const container = document.getElementById('payment-modal-container');
   if (!container) {
     console.error('Payment modal container not found!');
     alert('Payment modal container not found. Please refresh the page.');
     return;
   }
-  
+
   const subtotal = parseFloat(hourlyRate);
-  const nyTax = subtotal * 0.0825; // 8.25% NY tax
+  const nyTax = subtotal * 0.0825;
   const total = subtotal + nyTax;
-  
+
   const modalHTML = `
     <div class="payment-modal">
       <div class="payment-container">
         <div class="payment-header">
           <span style="font-size: 1.5rem;">💳</span>
           <h2>Complete Payment</h2>
-          <button class="close-btn" onclick="closePaymentModal()">×</button>
+          <button class="close-btn" id="modalCloseBtn">×</button>
         </div>
         
         <div class="payment-body">
-          <!-- Tutor Info -->
           <div class="tutor-info">
             <div class="tutor-avatar">${tutorName.charAt(0).toUpperCase()}</div>
             <div class="tutor-details">
@@ -212,7 +247,6 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
             </div>
           </div>
 
-          <!-- Payment Summary -->
           <div class="payment-summary">
             <div class="summary-header">
               <span>💰</span>
@@ -240,11 +274,9 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
             </div>
           </div>
 
-          <!-- Payment Methods -->
           <div class="payment-methods">
             <h3>Choose Payment Method</h3>
             <div class="payment-options">
-              <!-- Google Pay -->
               <label class="payment-option">
                 <input type="radio" name="payment-method" value="google-pay">
                 <div class="payment-option-content">
@@ -256,7 +288,6 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
                 </div>
               </label>
 
-              <!-- Apple Pay -->
               <label class="payment-option">
                 <input type="radio" name="payment-method" value="apple-pay">
                 <div class="payment-option-content">
@@ -268,7 +299,6 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
                 </div>
               </label>
 
-              <!-- PayPal -->
               <label class="payment-option">
                 <input type="radio" name="payment-method" value="paypal">
                 <div class="payment-option-content">
@@ -280,7 +310,6 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
                 </div>
               </label>
 
-              <!-- Credit/Debit Card -->
               <label class="payment-option" id="card-option">
                 <input type="radio" name="payment-method" value="credit-card" checked>
                 <div class="payment-option-content">
@@ -300,7 +329,6 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
             </div>
           </div>
 
-          <!-- Card Form -->
           <div class="card-form active" id="card-form">
             <div class="form-group">
               <label class="form-label">Card Number</label>
@@ -357,8 +385,8 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
           </div>
 
           <div class="payment-actions">
-            <button type="button" class="btn-cancel" onclick="closePaymentModal()">Cancel</button>
-            <button type="button" class="btn-pay" id="pay-button" onclick="processPayment(${bookingId}, ${total.toFixed(2)})">💳 Pay $${total.toFixed(2)}</button>
+            <button type="button" class="btn-cancel" id="modalCancelBtn">Cancel</button>
+            <button type="button" class="btn-pay" id="pay-button" data-booking-id="${bookingId}" data-amount="${total.toFixed(2)}">💳 Pay $${total.toFixed(2)}</button>
           </div>
         </div>
       </div>
@@ -368,10 +396,54 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
   container.innerHTML = modalHTML;
   
   // Initialize modal functionality
-  initializePaymentModal();
+  initializePaymentModal(bookingId, total);
 }
 
-function initializePaymentModal() {
+function initializePaymentModal(bookingId, total) {
+  console.log('Initializing payment modal for booking:', bookingId);
+  
+  // Close button functionality
+  const closeBtn = document.getElementById('modalCloseBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closePaymentModal();
+    });
+  }
+  
+  // Cancel button functionality
+  const cancelBtn = document.getElementById('modalCancelBtn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      closePaymentModal();
+    });
+  }
+  
+  // Pay button functionality
+  const payBtn = document.getElementById('pay-button');
+  if (payBtn) {
+    payBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const id = this.getAttribute('data-booking-id');
+      const amount = this.getAttribute('data-amount');
+      processPayment(parseInt(id), parseFloat(amount));
+    });
+  }
+  
+  // Close on overlay click
+  const modal = document.querySelector('.payment-modal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closePaymentModal();
+      }
+    });
+  }
+
   // Auto-format card number
   const cardNumberInput = document.getElementById('cardNumber');
   if (cardNumberInput) {
@@ -405,29 +477,25 @@ function initializePaymentModal() {
   // Handle payment method selection
   document.querySelectorAll('input[name="payment-method"]').forEach(radio => {
     radio.addEventListener('change', function() {
-      // Remove selected class from all options
       document.querySelectorAll('.payment-option').forEach(option => {
         option.classList.remove('selected');
       });
-      
-      // Add selected class to current option
       this.closest('.payment-option').classList.add('selected');
       
-      // Show/hide card form
       const cardForm = document.getElementById('card-form');
       const payButton = document.getElementById('pay-button');
       
       if (this.value === 'credit-card') {
         cardForm.classList.add('active');
-        payButton.innerHTML = payButton.innerHTML.replace(/Pay with .+/, 'Pay $' + payButton.innerHTML.match(/\$[\d.]+/)[0].substring(1));
+        payButton.innerHTML = `💳 Pay $${total.toFixed(2)}`;
       } else {
         cardForm.classList.remove('active');
         if (this.value === 'google-pay') {
-          payButton.innerHTML = payButton.innerHTML.replace(/💳 Pay \$/, 'Pay with Google Pay $');
+          payButton.innerHTML = `Pay with Google Pay $${total.toFixed(2)}`;
         } else if (this.value === 'apple-pay') {
-          payButton.innerHTML = payButton.innerHTML.replace(/💳 Pay \$/, 'Pay with Apple Pay $');
+          payButton.innerHTML = `Pay with Apple Pay $${total.toFixed(2)}`;
         } else if (this.value === 'paypal') {
-          payButton.innerHTML = payButton.innerHTML.replace(/💳 Pay \$/, 'Pay with PayPal $');
+          payButton.innerHTML = `Pay with PayPal $${total.toFixed(2)}`;
         }
       }
     });
@@ -438,12 +506,22 @@ function initializePaymentModal() {
   if (defaultSelected) {
     defaultSelected.closest('.payment-option').classList.add('selected');
   }
+  
+  // ESC key to close
+  document.addEventListener('keydown', function escHandler(e) {
+    if (e.key === 'Escape') {
+      closePaymentModal();
+      document.removeEventListener('keydown', escHandler);
+    }
+  });
 }
 
 function closePaymentModal() {
+  console.log('Closing payment modal');
   const modal = document.querySelector('.payment-modal');
   if (modal) {
     modal.style.opacity = '0';
+    modal.style.transition = 'opacity 0.3s ease';
     setTimeout(() => {
       const container = document.getElementById('payment-modal-container');
       if (container) {
@@ -458,6 +536,11 @@ async function processPayment(bookingId, amount) {
   
   const selectedMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'credit-card';
   const payBtn = document.getElementById('pay-button');
+  
+  if (!payBtn) {
+    console.error('Pay button not found');
+    return;
+  }
   
   // Disable button and show loading
   payBtn.disabled = true;
@@ -483,8 +566,7 @@ async function processPayment(bookingId, amount) {
         booking_id: bookingId,
         payment_method: {
           type: selectedMethod,
-          last4: selectedMethod === 'credit-card' ? '4242' : null,
-          name: selectedMethod === 'credit-card' ? document.getElementById('cardholderName')?.value : 'Online Payment'
+          last4: selectedMethod === 'credit-card' ? '4242' : null
         },
         amount: amount
       })
@@ -494,6 +576,11 @@ async function processPayment(bookingId, amount) {
     console.log('Payment result:', result);
 
     if (result.success) {
+      // Update booking payment status
+      await fetch(`/api/bookings/${bookingId}/payment-success`, {
+        method: 'POST'
+      });
+      
       alert(`Payment successful! 🎉\nPayment ID: ${result.payment_id}`);
       closePaymentModal();
       
@@ -501,40 +588,13 @@ async function processPayment(bookingId, amount) {
       window.location.reload();
     } else {
       payBtn.disabled = false;
-      payBtn.innerHTML = `💳 Pay $${amount}`;
+      payBtn.innerHTML = `💳 Pay $${amount.toFixed(2)}`;
       alert(`Payment failed: ${result.message || 'Unknown error'}`);
     }
   } catch (error) {
-    payBtn.disabled = false;
-    payBtn.innerHTML = `💳 Pay $${amount}`;
-    alert('Payment processing failed. Please try again.');
     console.error('Payment error:', error);
+    payBtn.disabled = false;
+    payBtn.innerHTML = `💳 Pay $${amount.toFixed(2)}`;
+    alert('Payment processing failed. Please try again.');
   }
 }
-
-// Close modal on ESC key
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    closePaymentModal();
-  }
-});
-
-// ── Notification badge ────────────────────────────────────────────────
-function loadNotifBadge() {
-  fetch('/api/notifications/unread-count')
-    .then(r => r.json())
-    .then(data => {
-      const badge = document.getElementById('sidebarBadge');
-      if (!badge) return;
-      if (data.count > 0) {
-        badge.textContent = data.count;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
-    })
-    .catch(err => console.log('Notification badge error:', err));
-}
-
-loadNotifBadge();
-setInterval(loadNotifBadge, 30000);

@@ -1,50 +1,50 @@
-const express       = require('express');
-const session       = require('express-session');
-const bcrypt        = require('bcrypt');
-const path          = require('path');
-const http          = require('http');
-const crypto        = require('crypto');
-const nodemailer    = require('nodemailer');
-const { Server }    = require('socket.io');
-const { google }    = require('googleapis');
+const express = require('express');
+const session = require('express-session');
+const bcrypt = require('bcrypt');
+const path = require('path');
+const http = require('http');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const { Server } = require('socket.io');
+const { google } = require('googleapis');
 require('dotenv').config();
 
-const db  = require('./db');
+const db = require('./db');
 const app = express();
 
 const httpServer = http.createServer(app);
-const io         = new Server(httpServer);
+const io = new Server(httpServer);
 
 app.use(express.json());
 app.use(express.static('public'));
+app.use(express.static('views'));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-this',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     maxAge: 1000 * 60 * 60 * 24,
     secure: false,
     httpOnly: true
   }
 }));
 
-// 🔧 FIXED: Proper requireLogin middleware
+// Require login middleware
 function requireLogin(req, res, next) {
-  console.log('🔐 Session check - userId:', req.session.userId);
-  
+  console.log('Session check - userId:', req.session.userId);
+
   if (!req.session.userId) {
-    console.log('❌ No session, redirecting to login');
-    // For HTML pages, redirect - For API routes, return JSON
+    console.log('No session, redirecting to login');
     if (req.path.startsWith('/api/')) {
       return res.status(401).json({ error: 'Not logged in' });
     }
     return res.redirect('/');
   }
-  console.log('✅ Session valid, proceeding');
+  console.log('Session valid, proceeding');
   next();
 }
 
-// ── Nodemailer transporter ────────────────────────────────────────────
+// Nodemailer transporter
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -56,7 +56,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// ── Helper: create notification with booking_id ──────────────────────────
+// Helper: create notification with booking_id
 async function createNotification(userId, type, title, message, bookingId = null) {
   try {
     await db.query(
@@ -69,30 +69,30 @@ async function createNotification(userId, type, title, message, bookingId = null
   }
 }
 
-// ── Pages ─────────────────────────────────────────────────────────────
-app.get('/',                (req, res) => res.sendFile(path.join(__dirname, 'views', 'login.html')));
-app.get('/register',        (req, res) => res.sendFile(path.join(__dirname, 'views', 'register.html')));
+// Pages
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'views', 'login.html')));
+app.get('/register', (req, res) => res.sendFile(path.join(__dirname, 'views', 'register.html')));
 app.get('/forgot-password', (req, res) => res.sendFile(path.join(__dirname, 'views', 'forgot-password.html')));
-app.get('/reset-password',  (req, res) => res.sendFile(path.join(__dirname, 'views', 'reset-password.html')));
-app.get('/dashboard',       requireLogin, (req, res) => {
-  console.log('📊 Dashboard accessed by user:', req.session.userId);
+app.get('/reset-password', (req, res) => res.sendFile(path.join(__dirname, 'views', 'reset-password.html')));
+app.get('/dashboard', requireLogin, (req, res) => {
+  console.log('Dashboard accessed by user:', req.session.userId);
   res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
 });
-app.get('/bookings',        requireLogin, (req, res) => {
-  console.log('📅 Bookings accessed by user:', req.session.userId);
+app.get('/bookings', requireLogin, (req, res) => {
+  console.log('Bookings accessed by user:', req.session.userId);
   res.sendFile(path.join(__dirname, 'views', 'bookings.html'));
 });
-app.get('/profile',         requireLogin, (req, res) => {
-  console.log('👤 Profile accessed by user:', req.session.userId);
+app.get('/profile', requireLogin, (req, res) => {
+  console.log('Profile accessed by user:', req.session.userId);
   res.sendFile(path.join(__dirname, 'views', 'profile.html'));
 });
-app.get('/messages',        requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'messages.html')));
-app.get('/messages/:id',    requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'messages.html')));
-app.get('/notifications',   requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'notifications.html')));
-app.get('/tutor/:id',       requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'tutor.html')));
+app.get('/messages', requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'messages.html')));
+app.get('/messages/:id', requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'messages.html')));
+app.get('/notifications', requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'notifications.html')));
+app.get('/tutor/:id', requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'tutor.html')));
 app.get('/tutor-dashboard', requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'tutor-dashboard.html')));
 
-// ── Auth ──────────────────────────────────────────────────────────────
+// Auth
 app.post('/api/register', async (req, res) => {
   const { full_name, email, password, role, university } = req.body;
   if (!full_name || !email || !password || !role)
@@ -110,8 +110,8 @@ app.post('/api/register', async (req, res) => {
         [result.insertId, '', 25.00]);
     }
     req.session.userId = result.insertId;
-    req.session.role   = role;
-    console.log('✅ User registered and session created:', result.insertId);
+    req.session.role = role;
+    console.log('User registered and session created:', result.insertId);
     res.json({ success: true, role });
   } catch (err) {
     console.error('Register error:', err);
@@ -125,13 +125,13 @@ app.post('/api/login', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     if (rows.length === 0) return res.status(401).json({ error: 'Invalid email or password.' });
-    const user  = rows[0];
+    const user = rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) return res.status(401).json({ error: 'Invalid email or password.' });
     req.session.userId = user.id;
-    req.session.role   = user.role;
-    console.log('✅ User logged in and session created:', user.id);
-    console.log('✅ Session after login:', JSON.stringify(req.session, null, 2));
+    req.session.role = user.role;
+    console.log('User logged in and session created:', user.id);
+    console.log('Session after login:', JSON.stringify(req.session, null, 2));
     res.json({ success: true, role: user.role });
   } catch (err) {
     console.error('Login error:', err);
@@ -139,10 +139,10 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-app.get('/logout', (req, res) => { 
-  console.log('👋 User logging out:', req.session.userId);
-  req.session.destroy(); 
-  res.redirect('/'); 
+app.get('/logout', (req, res) => {
+  console.log('User logging out:', req.session.userId);
+  req.session.destroy();
+  res.redirect('/');
 });
 
 app.get('/api/me', requireLogin, async (req, res) => {
@@ -155,16 +155,16 @@ app.get('/api/me', requireLogin, async (req, res) => {
   }
 });
 
-// ── Forgot Password ───────────────────────────────────────────────────
+// Forgot Password
 app.post('/api/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required.' });
   try {
     const [users] = await db.query('SELECT id, full_name FROM users WHERE email = ?', [email]);
     if (users.length === 0) return res.json({ success: true });
-    const user    = users[0];
-    const token   = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 60 * 60 * 1000); 
+    const user = users[0];
+    const token = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
     await db.query(
       'UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0',
       [user.id]
@@ -175,8 +175,8 @@ app.post('/api/forgot-password', async (req, res) => {
     );
     const resetUrl = `http://localhost:3000/reset-password?token=${token}`;
     await transporter.sendMail({
-      from:    `"TutorMatch" <${process.env.MAIL_USER}>`,
-      to:      email,
+      from: `"TutorMatch" <${process.env.MAIL_USER}>`,
+      to: email,
       subject: 'Reset your TutorMatch password',
       html: `
         <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0f1428;color:#e8eaf6;border-radius:16px;padding:32px;">
@@ -230,7 +230,7 @@ app.get('/api/reset-password/verify', async (req, res) => {
 app.post('/api/reset-password', async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) return res.status(400).json({ error: 'Missing fields.' });
-  if (password.length < 8)  return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
   try {
     const [rows] = await db.query(
       'SELECT * FROM password_resets WHERE token = ? AND used = 0 AND expires_at > NOW()',
@@ -239,7 +239,7 @@ app.post('/api/reset-password', async (req, res) => {
     if (rows.length === 0)
       return res.status(400).json({ error: 'This link has expired or already been used.' });
     const reset = rows[0];
-    const hash  = await bcrypt.hash(password, 12);
+    const hash = await bcrypt.hash(password, 12);
     await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hash, reset.user_id]);
     await db.query('UPDATE password_resets SET used = 1 WHERE id = ?', [reset.id]);
     res.json({ success: true });
@@ -249,7 +249,7 @@ app.post('/api/reset-password', async (req, res) => {
   }
 });
 
-// ── Search ────────────────────────────────────────────────────────────
+// Search
 app.get('/api/search', async (req, res) => {
   const q = req.query.q || '';
   if (q.length < 2) return res.json([]);
@@ -261,9 +261,9 @@ app.get('/api/search', async (req, res) => {
              COALESCE(AVG(r.rating), 0) AS avg_rating
       FROM users u
       JOIN tutor_profiles tp ON tp.user_id = u.id
-      JOIN tutor_courses  tc ON tc.tutor_id = u.id
-      LEFT JOIN bookings  b  ON b.tutor_id = u.id
-      LEFT JOIN reviews   r  ON r.booking_id = b.id
+      JOIN tutor_courses tc ON tc.tutor_id = u.id
+      LEFT JOIN bookings b ON b.tutor_id = u.id
+      LEFT JOIN reviews r ON r.booking_id = b.id
       WHERE u.role = 'tutor'
         AND (tc.course_code LIKE ? OR tc.course_name LIKE ? OR tc.professor LIKE ?)
       GROUP BY u.id, tc.id
@@ -275,7 +275,7 @@ app.get('/api/search', async (req, res) => {
   }
 });
 
-// ── Tutor profile ─────────────────────────────────────────────────────
+// Tutor profile
 app.get('/api/tutors/:id', async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -284,8 +284,8 @@ app.get('/api/tutors/:id', async (req, res) => {
              COUNT(DISTINCT r.id) AS review_count
       FROM users u
       JOIN tutor_profiles tp ON tp.user_id = u.id
-      LEFT JOIN bookings b   ON b.tutor_id = u.id
-      LEFT JOIN reviews r    ON r.booking_id = b.id
+      LEFT JOIN bookings b ON b.tutor_id = u.id
+      LEFT JOIN reviews r ON r.booking_id = b.id
       WHERE u.id = ? AND u.role = 'tutor'
       GROUP BY u.id, tp.id
     `, [req.params.id]);
@@ -300,25 +300,26 @@ app.get('/api/tutors/:id', async (req, res) => {
   }
 });
 
-// ── Bookings ──────────────────────────────────────────────────────────
+// Bookings
 app.post('/api/bookings', requireLogin, async (req, res) => {
   const { tutor_id, course_code, scheduled_at, message, session_type } = req.body;
   if (!tutor_id || !course_code || !scheduled_at)
     return res.status(400).json({ error: 'Missing required fields.' });
   try {
     const [result] = await db.query(
-      'INSERT INTO bookings (student_id, tutor_id, course_code, scheduled_at, message, session_type) VALUES (?, ?, ?, ?, ?, ?)',
-      [req.session.userId, tutor_id, course_code, scheduled_at, message || '', session_type || 'one_on_one']
+      'INSERT INTO bookings (student_id, tutor_id, course_code, scheduled_at, message, session_type, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [req.session.userId, tutor_id, course_code, scheduled_at, message || '', session_type || 'one_on_one', 'unpaid']
     );
     const bookingId = result.insertId;
     const [student] = await db.query('SELECT full_name FROM users WHERE id = ?', [req.session.userId]);
     await createNotification(
-      tutor_id, 'booking_request', '📅 New Booking Request',
+      tutor_id, 'booking_request', ' New Booking Request',
       `${student[0].full_name} wants to book a session for ${course_code}`,
       bookingId
     );
     res.json({ success: true });
   } catch (err) {
+    console.error('Booking creation error:', err);
     res.status(500).json({ error: 'Could not create booking.' });
   }
 });
@@ -326,15 +327,30 @@ app.post('/api/bookings', requireLogin, async (req, res) => {
 app.get('/api/bookings', requireLogin, async (req, res) => {
   try {
     const [rows] = await db.query(`
-      SELECT b.*, u.full_name AS tutor_name, tp.hourly_rate, tp.is_verified
+      SELECT b.*, 
+             u.full_name AS tutor_name, 
+             tp.hourly_rate, 
+             tp.is_verified,
+             COALESCE(p.status, 'unpaid') as payment_status,
+             p.id as payment_id
       FROM bookings b
-      JOIN users u           ON u.id = b.tutor_id
+      JOIN users u ON u.id = b.tutor_id
       JOIN tutor_profiles tp ON tp.user_id = b.tutor_id
+      LEFT JOIN payments p ON p.booking_id = b.id
       WHERE b.student_id = ?
       ORDER BY b.created_at DESC
     `, [req.session.userId]);
+
+    console.log('Bookings with payment status:', rows.map(b => ({
+      id: b.id,
+      status: b.status,
+      payment_status: b.payment_status,
+      canPay: b.status === 'confirmed' && (b.payment_status === 'unpaid' || b.payment_status === 'pending')
+    })));
+
     res.json(rows);
   } catch (err) {
+    console.error('Bookings API error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -352,9 +368,32 @@ app.patch('/api/bookings/:id/cancel', requireLogin, async (req, res) => {
   }
 });
 
-// ── Profile ───────────────────────────────────────────────────────────
+app.post('/api/bookings/:id/payment-success', requireLogin, async (req, res) => {
+  try {
+    const [booking] = await db.query(
+      'SELECT * FROM bookings WHERE id = ? AND student_id = ?',
+      [req.params.id, req.session.userId]
+    );
+
+    if (booking.length === 0) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    await db.query(
+      "UPDATE bookings SET payment_status = 'paid' WHERE id = ?",
+      [req.params.id]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error updating payment status:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Profile
 app.get('/api/profile', requireLogin, async (req, res) => {
-  console.log('📋 Profile API accessed by user:', req.session.userId);
+  console.log('Profile API accessed by user:', req.session.userId);
   try {
     const [rows] = await db.query(
       'SELECT id, full_name, email, role, university FROM users WHERE id = ?',
@@ -422,14 +461,14 @@ app.delete('/api/profile/courses/:id', requireLogin, async (req, res) => {
   }
 });
 
-// ── Course Catalog API ───────────────────────────────────────────────
+// Course Catalog API
 app.get('/api/courses', requireLogin, async (req, res) => {
-  console.log('📚 Courses API accessed by user:', req.session.userId);
+  console.log('Courses API accessed by user:', req.session.userId);
   try {
     const [courses] = await db.query(
       'SELECT course_code, course_name, department FROM course_catalog ORDER BY course_code'
     );
-    console.log(`📚 Found ${courses.length} courses`);
+    console.log(`Found ${courses.length} courses`);
     res.json(courses);
   } catch (err) {
     console.error('Courses API error:', err);
@@ -438,12 +477,12 @@ app.get('/api/courses', requireLogin, async (req, res) => {
 });
 
 app.get('/api/professors', requireLogin, async (req, res) => {
-  console.log('👨‍🏫 Professors API accessed by user:', req.session.userId);
+  console.log('Professors API accessed by user:', req.session.userId);
   try {
     const [professors] = await db.query(
       'SELECT name, department FROM professors ORDER BY name'
     );
-    console.log(`👨‍🏫 Found ${professors.length} professors`);
+    console.log(`Found ${professors.length} professors`);
     res.json(professors);
   } catch (err) {
     console.error('Professors API error:', err);
@@ -467,12 +506,12 @@ app.get('/api/course/:code', requireLogin, async (req, res) => {
   }
 });
 
-// ── Tutor dashboard ───────────────────────────────────────────────────
+// Tutor dashboard
 app.get('/api/tutor-bookings', requireLogin, async (req, res) => {
   try {
     const [bookings] = await db.query(`
       SELECT b.id, b.course_code, b.scheduled_at, b.status, b.message,
-             b.session_type, b.created_at,
+             b.session_type, b.created_at, b.payment_status,
              u.full_name AS student_name, u.email AS student_email
       FROM bookings b
       JOIN users u ON u.id = b.student_id
@@ -509,33 +548,30 @@ app.patch('/api/tutor-bookings/:id/confirm', requireLogin, async (req, res) => {
 app.patch('/api/tutor-bookings/:id/decline', requireLogin, async (req, res) => {
   try {
     const { reason } = req.body;
-    
+
     const [result] = await db.query(
       "UPDATE bookings SET status = 'cancelled' WHERE id = ? AND tutor_id = ? AND status = 'pending'",
       [req.params.id, req.session.userId]
     );
     if (result.affectedRows === 0) return res.status(400).json({ error: 'Booking not found.' });
-    
+
     const [booking] = await db.query(
       'SELECT b.*, u.full_name AS tutor_name FROM bookings b JOIN users u ON u.id = b.tutor_id WHERE b.id = ?',
       [req.params.id]
     );
-    
+
     if (booking.length > 0) {
       const bookingData = booking[0];
-      
-      // Send notification
+
       await createNotification(bookingData.student_id, 'booking_declined', '❌ Booking Declined',
         `${bookingData.tutor_name} declined your session for ${bookingData.course_code}`);
-      
-      // If reason provided, send it as a message
+
       if (reason && reason.trim()) {
         await db.query(
           'INSERT INTO messages (booking_id, sender_id, content) VALUES (?, ?, ?)',
-          [req.params.id, req.session.userId, `📝 Decline Reason: ${reason.trim()}`]
+          [req.params.id, req.session.userId, ` Decline Reason: ${reason.trim()}`]
         );
-        
-        // Notify student of new message
+
         await createNotification(bookingData.student_id, 'new_message', '💬 Message from Tutor',
           `${bookingData.tutor_name} sent you a message about your ${bookingData.course_code} session`);
       }
@@ -568,58 +604,51 @@ app.patch('/api/tutor-bookings/:id/complete', requireLogin, async (req, res) => 
   }
 });
 
-// ── Add this to your server.js after the existing tutor-bookings endpoints ──
-
 app.patch('/api/tutor-bookings/:id/cancel-confirmed', requireLogin, async (req, res) => {
   try {
     const { reason } = req.body;
-    
-    // Verify the booking exists and is confirmed by this tutor
+
     const [booking] = await db.query(
       "SELECT b.*, s.full_name AS student_name, s.email AS student_email, t.full_name AS tutor_name FROM bookings b JOIN users s ON s.id = b.student_id JOIN users t ON t.id = b.tutor_id WHERE b.id = ? AND b.tutor_id = ? AND b.status = 'confirmed'",
       [req.params.id, req.session.userId]
     );
-    
+
     if (booking.length === 0) {
       return res.status(400).json({ error: 'Booking not found or not confirmed by you.' });
     }
-    
+
     const bookingData = booking[0];
-    
-    // Update booking status to cancelled
+
     const [result] = await db.query(
       "UPDATE bookings SET status = 'cancelled' WHERE id = ? AND tutor_id = ? AND status = 'confirmed'",
       [req.params.id, req.session.userId]
     );
-    
+
     if (result.affectedRows === 0) {
       return res.status(400).json({ error: 'Could not cancel booking.' });
     }
-    
-    // Send notification to student about cancellation
+
     await createNotification(
-      bookingData.student_id, 
-      'session_cancelled', 
+      bookingData.student_id,
+      'session_cancelled',
       '⚠️ Session Canceled by Tutor',
       `${bookingData.tutor_name} had to cancel your ${bookingData.course_code} session`
     );
-    
-    // Send cancellation reason as a message
+
     if (reason && reason.trim()) {
       await db.query(
         'INSERT INTO messages (booking_id, sender_id, content) VALUES (?, ?, ?)',
         [req.params.id, req.session.userId, `⚠️ Session Cancellation: ${reason.trim()}`]
       );
-      
-      // Notify student of new message
+
       await createNotification(
-        bookingData.student_id, 
-        'new_message', 
+        bookingData.student_id,
+        'new_message',
         '💬 Cancellation Message',
         `${bookingData.tutor_name} sent you a message about your ${bookingData.course_code} session cancellation`
       );
     }
-    
+
     res.json({ success: true });
   } catch (err) {
     console.error('Cancel confirmed booking error:', err);
@@ -627,7 +656,7 @@ app.patch('/api/tutor-bookings/:id/cancel-confirmed', requireLogin, async (req, 
   }
 });
 
-// ── Reviews ───────────────────────────────────────────────────────────
+// Reviews
 app.post('/api/reviews', requireLogin, async (req, res) => {
   const { booking_id, rating, comment } = req.body;
   if (!booking_id || !rating || rating < 1 || rating > 5)
@@ -657,7 +686,7 @@ app.get('/api/tutors/:id/reviews', async (req, res) => {
       SELECT r.id, r.rating, r.comment, r.created_at, u.full_name AS student_name
       FROM reviews r
       JOIN bookings b ON b.id = r.booking_id
-      JOIN users u    ON u.id = b.student_id
+      JOIN users u ON u.id = b.student_id
       WHERE b.tutor_id = ?
       ORDER BY r.created_at DESC
     `, [req.params.id]);
@@ -676,7 +705,7 @@ app.get('/api/tutors/:id/reviews', async (req, res) => {
   }
 });
 
-// ── Notifications ─────────────────────────────────────────────────────
+// Notifications
 app.get('/api/notifications', requireLogin, async (req, res) => {
   try {
     const [rows] = await db.query(
@@ -722,48 +751,149 @@ app.patch('/api/notifications/:id/read', requireLogin, async (req, res) => {
   }
 });
 
-// ── Messages ──────────────────────────────────────────────────────────
+// Messages
 app.get('/api/conversations', requireLogin, async (req, res) => {
+  const userId = req.session.userId;
+
   try {
     const [rows] = await db.query(`
-      SELECT
-        b.id AS booking_id, b.course_code, b.status, b.session_type,
-        CASE WHEN b.student_id = ? THEN tutor.full_name   ELSE student.full_name END AS other_name,
-        CASE WHEN b.student_id = ? THEN b.tutor_id        ELSE b.student_id      END AS other_id,
-        (SELECT content    FROM messages WHERE booking_id = b.id ORDER BY created_at DESC LIMIT 1) AS last_message,
+      SELECT 
+        b.id AS booking_id, 
+        b.course_code, 
+        b.status, 
+        b.session_type,
+        b.created_at,
+        CASE WHEN b.student_id = ? THEN tutor.full_name ELSE student.full_name END AS other_name,
+        CASE WHEN b.student_id = ? THEN b.tutor_id ELSE b.student_id END AS other_id,
+        CASE WHEN b.student_id = ? THEN tutor.full_name ELSE student.full_name END AS tutor_name,
+        CASE WHEN b.student_id = ? THEN student.full_name ELSE tutor.full_name END AS student_name,
+        (SELECT content FROM messages WHERE booking_id = b.id ORDER BY created_at DESC LIMIT 1) AS last_message,
         (SELECT created_at FROM messages WHERE booking_id = b.id ORDER BY created_at DESC LIMIT 1) AS last_message_at,
-        (SELECT COUNT(*)   FROM messages WHERE booking_id = b.id) AS message_count
+        (SELECT COUNT(*) FROM messages WHERE booking_id = b.id AND sender_id != ? AND read_at IS NULL) AS unread_count
       FROM bookings b
       JOIN users student ON student.id = b.student_id
-      JOIN users tutor   ON tutor.id   = b.tutor_id
-      WHERE (b.student_id = ? OR b.tutor_id = ?) AND b.status IN ('confirmed','completed')
-      ORDER BY last_message_at DESC, b.created_at DESC
-    `, [req.session.userId, req.session.userId, req.session.userId, req.session.userId]);
+      JOIN users tutor ON tutor.id = b.tutor_id
+      WHERE (b.student_id = ? OR b.tutor_id = ?) 
+        AND (
+          b.status IN ('confirmed', 'completed') 
+          OR (b.status = 'cancelled' AND EXISTS (SELECT 1 FROM messages WHERE booking_id = b.id))
+        )
+      ORDER BY 
+        COALESCE(last_message_at, b.created_at) DESC
+    `, [userId, userId, userId, userId, userId, userId, userId]);
+
+    console.log(`Conversations for user ${userId}:`, rows);
     res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: 'Could not load conversations.' });
+  } catch (error) {
+    console.error('Conversations error:', error);
+    res.status(500).json({ error: 'Failed to load conversations' });
   }
 });
 
-app.get('/api/messages/:bookingId', requireLogin, async (req, res) => {
+app.get('/api/conversations/:bookingId/messages', requireLogin, async (req, res) => {
   try {
     const [booking] = await db.query(
       'SELECT * FROM bookings WHERE id = ? AND (student_id = ? OR tutor_id = ?)',
       [req.params.bookingId, req.session.userId, req.session.userId]
     );
-    if (booking.length === 0) return res.status(403).json({ error: 'Access denied.' });
-    const [messages] = await db.query(`
-      SELECT m.id, m.content, m.created_at, m.sender_id, u.full_name AS sender_name
-      FROM messages m JOIN users u ON u.id = m.sender_id
-      WHERE m.booking_id = ? ORDER BY m.created_at ASC
+
+    if (booking.length === 0) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    const [messages] = await db.query(
+      'SELECT * FROM messages WHERE booking_id = ? ORDER BY created_at ASC',
+      [req.params.bookingId]
+    );
+
+    const [bookingDetails] = await db.query(`
+      SELECT b.*, s.full_name as student_name, t.full_name as tutor_name
+      FROM bookings b
+      JOIN users s ON s.id = b.student_id
+      JOIN users t ON t.id = b.tutor_id  
+      WHERE b.id = ?
     `, [req.params.bookingId]);
-    res.json(messages);
-  } catch (err) {
-    res.status(500).json({ error: 'Could not load messages.' });
+
+    res.json({
+      booking: bookingDetails[0],
+      messages: messages
+    });
+  } catch (error) {
+    console.error('Error loading messages:', error);
+    res.status(500).json({ error: 'Could not load messages' });
   }
 });
 
-// ── Google OAuth helpers ──────────────────────────────────────────────
+app.post('/api/conversations/send', requireLogin, async (req, res) => {
+  try {
+    const { booking_id, content } = req.body;
+
+    if (!booking_id || !content || !content.trim()) {
+      return res.status(400).json({ error: 'Missing booking_id or content' });
+    }
+
+    const [booking] = await db.query(
+      'SELECT * FROM bookings WHERE id = ? AND (student_id = ? OR tutor_id = ?)',
+      [booking_id, req.session.userId, req.session.userId]
+    );
+
+    if (booking.length === 0) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO messages (booking_id, sender_id, content) VALUES (?, ?, ?)',
+      [booking_id, req.session.userId, content.trim()]
+    );
+
+    const [newMessage] = await db.query(`
+      SELECT m.*, u.full_name as sender_name
+      FROM messages m
+      JOIN users u ON u.id = m.sender_id
+      WHERE m.id = ?
+    `, [result.insertId]);
+
+    const bookingData = booking[0];
+    const recipientId = req.session.userId === bookingData.student_id ? bookingData.tutor_id : bookingData.student_id;
+
+    if (io) {
+      io.to(`user_${recipientId}`).emit('new_message', {
+        booking_id: booking_id,
+        message: newMessage[0]
+      });
+    }
+
+    const [sender] = await db.query('SELECT full_name FROM users WHERE id = ?', [req.session.userId]);
+    await createNotification(
+      recipientId,
+      'new_message',
+      '💬 New Message',
+      `${sender[0].full_name} sent you a message`,
+      booking_id
+    );
+
+    res.json({ success: true, message: newMessage[0] });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: 'Could not send message' });
+  }
+});
+
+app.post('/api/conversations/:bookingId/read', requireLogin, async (req, res) => {
+  try {
+    await db.query(
+      'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE booking_id = ? AND sender_id != ? AND read_at IS NULL',
+      [req.params.bookingId, req.session.userId]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marking as read:', error);
+    res.status(500).json({ error: 'Could not mark as read' });
+  }
+});
+
+// Google OAuth helpers
 function getOAuthClient() {
   return new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -794,9 +924,9 @@ app.get('/auth/google/callback', requireLogin, async (req, res) => {
       INSERT INTO google_tokens (user_id, access_token, refresh_token, expiry_date)
       VALUES (?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
-        access_token  = VALUES(access_token),
+        access_token = VALUES(access_token),
         refresh_token = COALESCE(VALUES(refresh_token), refresh_token),
-        expiry_date   = VALUES(expiry_date)
+        expiry_date = VALUES(expiry_date)
     `, [req.session.userId, tokens.access_token, tokens.refresh_token || null, tokens.expiry_date || null]);
     if (booking_id) {
       await createCalendarEvent(req.session.userId, booking_id, tokens);
@@ -830,7 +960,7 @@ async function createCalendarEvent(userId, bookingId, tokens) {
   const [bookings] = await db.query(`
     SELECT b.course_code, b.scheduled_at, b.session_type,
            s.full_name AS student_name, s.email AS student_email,
-           t.full_name AS tutor_name,   t.email AS tutor_email
+           t.full_name AS tutor_name, t.email AS tutor_email
     FROM bookings b
     JOIN users s ON s.id = b.student_id
     JOIN users t ON t.id = b.tutor_id
@@ -844,37 +974,32 @@ async function createCalendarEvent(userId, bookingId, tokens) {
     await db.query('UPDATE google_tokens SET access_token = ?, expiry_date = ? WHERE user_id = ?',
       [newTokens.access_token, newTokens.expiry_date, userId]);
   });
-  const calendar  = google.calendar({ version: 'v3', auth: oauth2Client });
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
   const startTime = new Date(bk.scheduled_at);
-  const endTime   = new Date(startTime.getTime() + 60 * 60 * 1000);
+  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
   const sessionLabel = { one_on_one: '1-on-1 Session', group: 'Group Session', resources: 'Resources Session' }[bk.session_type] || 'Session';
   await calendar.events.insert({
     calendarId: 'primary',
     requestBody: {
-      summary:     `TutorMatch — ${bk.course_code} ${sessionLabel}`,
+      summary: `TutorMatch — ${bk.course_code} ${sessionLabel}`,
       description: `Tutoring session via TutorMatch.\nTutor: ${bk.tutor_name}\nStudent: ${bk.student_name}\nCourse: ${bk.course_code}`,
       start: { dateTime: startTime.toISOString(), timeZone: 'America/New_York' },
-      end:   { dateTime: endTime.toISOString(),   timeZone: 'America/New_York' },
+      end: { dateTime: endTime.toISOString(), timeZone: 'America/New_York' },
       attendees: [{ email: bk.student_email }, { email: bk.tutor_email }],
       reminders: { useDefault: false, overrides: [{ method: 'email', minutes: 60 }, { method: 'popup', minutes: 15 }] }
     }
   });
 }
 
-// ───────────────────────────────────────────────────────────────────────
-// ── STAGE 9: STRIPE PAYMENT MOCK ──────────────────────────────────────
-// ───────────────────────────────────────────────────────────────────────
-
-// Mock Stripe payment processing
+// STAGE 9: STRIPE PAYMENT MOCK
 app.post('/api/payments/process', requireLogin, async (req, res) => {
   const { booking_id, payment_method, amount } = req.body;
-  
+
   if (!booking_id || !payment_method || !amount) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   try {
-    // Check booking exists and is confirmed
     const [bookings] = await db.query(`
       SELECT b.*, s.full_name AS student_name, s.email AS student_email,
              t.full_name AS tutor_name, t.email AS tutor_email, tp.hourly_rate
@@ -890,39 +1015,33 @@ app.post('/api/payments/process', requireLogin, async (req, res) => {
     }
 
     const booking = bookings[0];
-    
-    // Mock Stripe processing delay
+
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Simulate 5% failure rate for realistic testing
     const shouldFail = Math.random() < 0.05;
-    
+
     if (shouldFail) {
-      return res.status(400).json({ 
-        error: 'Payment failed', 
+      return res.status(400).json({
+        error: 'Payment failed',
         code: 'card_declined',
         message: 'Your card was declined. Please try a different payment method.'
       });
     }
 
-    // Generate payment record
     const paymentId = `pay_mock_${crypto.randomBytes(12).toString('hex')}`;
-    
+
     await db.query(`
       INSERT INTO payments (booking_id, student_id, tutor_id, amount, stripe_payment_id, status, payment_method_last4)
       VALUES (?, ?, ?, ?, ?, 'paid', ?)
     `, [booking_id, req.session.userId, booking.tutor_id, amount, paymentId, payment_method.last4]);
 
-    // Update booking to paid status
     await db.query(
-      "UPDATE bookings SET payment_status = 'paid' WHERE id = ?", 
+      "UPDATE bookings SET payment_status = 'paid' WHERE id = ?",
       [booking_id]
     );
 
-    // Send email receipt
     await sendPaymentReceipt(booking, amount, paymentId);
 
-    // Notify tutor of payment
     await createNotification(
       booking.tutor_id,
       'payment_received',
@@ -930,8 +1049,8 @@ app.post('/api/payments/process', requireLogin, async (req, res) => {
       `${booking.student_name} paid $${amount} for ${booking.course_code} session`
     );
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       payment_id: paymentId,
       amount: amount
     });
@@ -942,7 +1061,6 @@ app.post('/api/payments/process', requireLogin, async (req, res) => {
   }
 });
 
-// Get payment history
 app.get('/api/payments', requireLogin, async (req, res) => {
   try {
     const [payments] = await db.query(`
@@ -958,7 +1076,7 @@ app.get('/api/payments', requireLogin, async (req, res) => {
       WHERE p.student_id = ? OR p.tutor_id = ?
       ORDER BY p.created_at DESC
     `, [req.session.userId, req.session.userId, req.session.userId]);
-    
+
     res.json(payments);
   } catch (err) {
     res.status(500).json({ error: 'Could not load payments' });
@@ -1044,11 +1162,11 @@ async function sendPaymentReceipt(booking, amount, paymentId) {
   }
 }
 
-// ── Socket.io ─────────────────────────────────────────────────────────
+// Socket.io
 io.on('connection', (socket) => {
-  console.log('🔌 Socket connected:', socket.id);
-  socket.on('join_user',     (userId)    => socket.join(`user_${userId}`));
-  socket.on('join_booking',  (bookingId) => socket.join(`booking_${bookingId}`));
+  console.log('Socket connected:', socket.id);
+  socket.on('join_user', (userId) => socket.join(`user_${userId}`));
+  socket.on('join_booking', (bookingId) => socket.join(`booking_${bookingId}`));
   socket.on('leave_booking', (bookingId) => socket.leave(`booking_${bookingId}`));
 
   socket.on('send_message', async (data) => {
@@ -1075,170 +1193,14 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('disconnect', () => console.log('🔌 Socket disconnected:', socket.id));
+  socket.on('disconnect', () => console.log('Socket disconnected:', socket.id));
 });
 
-// ── Conversations endpoint - REPLACE in server.js ──
-// This ensures cancelled sessions with decline messages appear in chat
-
-app.get('/api/conversations', requireLogin, async (req, res) => {
-  const userId = req.session.user.id;
-  
-  try {
-    const [rows] = await db.query(`
-      SELECT 
-        b.id AS booking_id, 
-        b.course_code, 
-        b.status, 
-        b.session_type,
-        b.created_at,
-        CASE WHEN b.student_id = ? THEN tutor.full_name ELSE student.full_name END AS other_name,
-        CASE WHEN b.student_id = ? THEN b.tutor_id ELSE b.student_id END AS other_id,
-        CASE WHEN b.student_id = ? THEN tutor.full_name ELSE student.full_name END AS tutor_name,
-        CASE WHEN b.student_id = ? THEN student.full_name ELSE tutor.full_name END AS student_name,
-        (SELECT content FROM messages WHERE booking_id = b.id ORDER BY created_at DESC LIMIT 1) AS last_message,
-        (SELECT created_at FROM messages WHERE booking_id = b.id ORDER BY created_at DESC LIMIT 1) AS last_message_at,
-        (SELECT COUNT(*) FROM messages WHERE booking_id = b.id AND sender_id != ? AND read_at IS NULL) AS unread_count
-      FROM bookings b
-      JOIN users student ON student.id = b.student_id
-      JOIN users tutor ON tutor.id = b.tutor_id
-      WHERE (b.student_id = ? OR b.tutor_id = ?) 
-        AND (
-          b.status IN ('confirmed', 'completed') 
-          OR (b.status = 'cancelled' AND EXISTS (SELECT 1 FROM messages WHERE booking_id = b.id))
-        )
-      ORDER BY 
-        COALESCE(last_message_at, b.created_at) DESC
-    `, [userId, userId, userId, userId, userId, userId, userId]);
-    
-    console.log(`Conversations for user ${userId}:`, rows);
-    res.json(rows);
-  } catch (error) {
-    console.error('Conversations error:', error);
-    res.status(500).json({ error: 'Failed to load conversations' });
-  }
-});
-
-// Get messages for a specific conversation
-app.get('/api/conversations/:bookingId/messages', requireLogin, async (req, res) => {
-  try {
-    // Verify user has access to this conversation
-    const [booking] = await db.query(
-      'SELECT * FROM bookings WHERE id = ? AND (student_id = ? OR tutor_id = ?)',
-      [req.params.bookingId, req.session.userId, req.session.userId]
-    );
-    
-    if (booking.length === 0) {
-      return res.status(404).json({ error: 'Conversation not found' });
-    }
-    
-    // Get messages
-    const [messages] = await db.query(
-      'SELECT * FROM messages WHERE booking_id = ? ORDER BY created_at ASC',
-      [req.params.bookingId]
-    );
-    
-    // Get booking details
-    const [bookingDetails] = await db.query(`
-      SELECT b.*, s.full_name as student_name, t.full_name as tutor_name
-      FROM bookings b
-      JOIN users s ON s.id = b.student_id
-      JOIN users t ON t.id = b.tutor_id  
-      WHERE b.id = ?
-    `, [req.params.bookingId]);
-    
-    res.json({
-      booking: bookingDetails[0],
-      messages: messages
-    });
-  } catch (error) {
-    console.error('Error loading messages:', error);
-    res.status(500).json({ error: 'Could not load messages' });
-  }
-});
-
-// Send a new message
-app.post('/api/conversations/send', requireLogin, async (req, res) => {
-  try {
-    const { booking_id, content } = req.body;
-    
-    if (!booking_id || !content || !content.trim()) {
-      return res.status(400).json({ error: 'Missing booking_id or content' });
-    }
-    
-    // Verify user has access to this conversation
-    const [booking] = await db.query(
-      'SELECT * FROM bookings WHERE id = ? AND (student_id = ? OR tutor_id = ?)',
-      [booking_id, req.session.userId, req.session.userId]
-    );
-    
-    if (booking.length === 0) {
-      return res.status(404).json({ error: 'Conversation not found' });
-    }
-    
-    // Insert message
-    const [result] = await db.query(
-      'INSERT INTO messages (booking_id, sender_id, content) VALUES (?, ?, ?)',
-      [booking_id, req.session.userId, content.trim()]
-    );
-    
-    // Get the inserted message with sender info
-    const [newMessage] = await db.query(`
-      SELECT m.*, u.full_name as sender_name
-      FROM messages m
-      JOIN users u ON u.id = m.sender_id
-      WHERE m.id = ?
-    `, [result.insertId]);
-    
-    // Notify other participant via socket
-    const bookingData = booking[0];
-    const recipientId = req.session.userId === bookingData.student_id ? bookingData.tutor_id : bookingData.student_id;
-    
-    if (io) {
-      io.to(`user_${recipientId}`).emit('new_message', {
-        booking_id: booking_id,
-        message: newMessage[0]
-      });
-    }
-    
-    // Create notification for recipient
-    const [sender] = await db.query('SELECT full_name FROM users WHERE id = ?', [req.session.userId]);
-    await createNotification(
-      recipientId,
-      'new_message',
-      '💬 New Message',
-      `${sender[0].full_name} sent you a message`,
-      booking_id
-    );
-    
-    res.json({ success: true, message: newMessage[0] });
-  } catch (error) {
-    console.error('Error sending message:', error);
-    res.status(500).json({ error: 'Could not send message' });
-  }
-});
-
-// Mark conversation as read
-app.post('/api/conversations/:bookingId/read', requireLogin, async (req, res) => {
-  try {
-    // Mark all messages in this conversation as read by current user
-    await db.query(
-      'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE booking_id = ? AND sender_id != ? AND read_at IS NULL',
-      [req.params.bookingId, req.session.userId]
-    );
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error marking as read:', error);
-    res.status(500).json({ error: 'Could not mark as read' });
-  }
-});
-
-// ── Start ─────────────────────────────────────────────────────────────
+// Start
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 TutorMatch running on http://localhost:${PORT}`);
-  console.log(`📊 Session secret configured: ${process.env.SESSION_SECRET ? 'YES' : 'NO (using fallback)'}`);
-  console.log(`📧 Email configured: ${process.env.MAIL_USER ? 'YES' : 'NO'}`);
-  console.log(`🗄️ Database connection: Check startup logs above`);
+  console.log(`Session secret configured: ${process.env.SESSION_SECRET ? 'YES' : 'NO (using fallback)'}`);
+  console.log(`Email configured: ${process.env.MAIL_USER ? 'YES' : 'NO'}`);
+  console.log(`Database connection: Check startup logs above`);
 });
