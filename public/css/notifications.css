@@ -1,34 +1,40 @@
+/* ── Notifications Page Base Styles ──────────────────────────────────────── */
 .notifications-page {
-  max-width: 700px;
+  max-width: 900px;
   margin: 0 auto;
+  padding: 24px;
 }
 
 .notifications-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  align-items: flex-start;
+  margin-bottom: 32px;
 }
 
 .notifications-header h1 {
-  font-size: 1.9rem;
+  font-size: 2rem;
   font-weight: 800;
   color: #000E54;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .notifications-header p {
-  color: #888;
-  margin-top: 4px;
-  font-size: 0.9rem;
+  color: #666;
+  margin: 8px 0 0;
+  font-size: 0.95rem;
 }
 
 .btn-read-all {
-  padding: 9px 20px;
-  background: #f4f6fb;
-  color: #000E54;
-  border: 2px solid #e0e4ef;
+  background: linear-gradient(135deg, #F76900, #e05e00);
+  color: white;
+  border: none;
   border-radius: 10px;
-  font-size: 0.88rem;
+  padding: 12px 20px;
+  font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
@@ -36,247 +42,619 @@
 }
 
 .btn-read-all:hover {
-  background: #000E54;
-  color: white;
-  border-color: #000E54;
+  background: linear-gradient(135deg, #e05e00, #d14e00);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(247, 105, 0, 0.3);
 }
 
 .notifications-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .notif-card {
   background: white;
-  border-radius: 14px;
-  padding: 18px 20px;
-  box-shadow: 0 2px 10px rgba(0,14,84,0.06);
-  border-left: 4px solid #F76900;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #e0e4ef;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  overflow: hidden;
+  border-left: 4px solid transparent;
 }
 
 .notif-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0,14,84,0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 14, 84, 0.15);
 }
 
 .notif-card.unread {
-  background: linear-gradient(135deg, #fffbf7, #fff8f3);
   border-left-color: #F76900;
+  background: linear-gradient(135deg, #fff9f5 0%, #fff3eb 100%);
 }
 
 .notif-card.read {
-  opacity: 0.75;
-  border-left-color: #ddd;
+  border-left-color: #e1e5f0;
 }
 
 .notif-icon {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   flex-shrink: 0;
-  margin-top: 2px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(247, 105, 0, 0.1);
+  border-radius: 12px;
 }
 
-.notif-body { flex: 1; }
+.notif-body {
+  flex: 1;
+  min-width: 0;
+}
 
 .notif-title {
+  font-size: 1rem;
   font-weight: 700;
   color: #000E54;
-  font-size: 0.95rem;
   margin-bottom: 4px;
 }
 
 .notif-message {
-  font-size: 0.88rem;
-  color: #555;
+  font-size: 0.9rem;
+  color: #666;
   line-height: 1.5;
+  margin-bottom: 8px;
 }
 
 .notif-time {
-  font-size: 0.75rem;
-  color: #bbb;
-  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #999;
+  font-weight: 500;
 }
 
 .notif-unread-dot {
-  width: 10px;
-  height: 10px;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 8px;
+  height: 8px;
   background: #F76900;
   border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 6px;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.notif-card.read .notif-unread-dot { display: none; }
+.notif-card.unread .notif-unread-dot {
+  opacity: 1;
+}
 
 .empty-notifications {
   text-align: center;
   padding: 60px 20px;
-  color: #aaa;
+  color: #666;
 }
 
-.empty-notifications .icon { font-size: 4rem; margin-bottom: 16px; }
-.empty-notifications h3 { font-size: 1.2rem; color: #000E54; font-weight: 700; margin-bottom: 8px; }
-.empty-notifications p { font-size: 0.9rem; }
+.empty-notifications .icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
 
-/* ── Notification badge in sidebar ── */
-.notif-badge {
-  background: #F76900;
+.empty-notifications h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #000E54;
+  margin-bottom: 8px;
+}
+
+.empty-notifications p {
+  font-size: 0.95rem;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* ── Modern Notification Action Buttons ─────────────────────────────────── */
+.notif-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 14, 84, 0.1);
+}
+
+.btn-accept-notif,
+.btn-reject-notif {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-accept-notif {
+  background: linear-gradient(135deg, #00d4aa 0%, #00b894 50%, #00a085 100%);
   color: white;
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 20px;
-  margin-left: auto;
-  min-width: 18px;
-  text-align: center;
-  line-height: 1.4;
+  box-shadow: 
+    0 4px 15px rgba(0, 212, 170, 0.4),
+    0 2px 8px rgba(0, 212, 170, 0.2);
 }
 
-/* ───────────────────────────────────────────────────────────────────── */
-/* ── MOBILE RESPONSIVE ─────────────────────────────────────────────── */
-/* ───────────────────────────────────────────────────────────────────── */
+.btn-accept-notif:hover {
+  background: linear-gradient(135deg, #00b894 0%, #00a085 50%, #008f74 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 8px 25px rgba(0, 212, 170, 0.5),
+    0 4px 12px rgba(0, 212, 170, 0.3);
+}
 
+.btn-accept-notif:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-reject-notif {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  color: #e74c3c;
+  border: 2px solid #e74c3c;
+  box-shadow: 
+    0 4px 15px rgba(231, 76, 60, 0.2),
+    0 2px 8px rgba(231, 76, 60, 0.1);
+}
+
+.btn-reject-notif:hover {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 8px 25px rgba(231, 76, 60, 0.4),
+    0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.btn-reject-notif:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Ripple effect */
+.btn-accept-notif::before,
+.btn-reject-notif::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-accept-notif:active::before,
+.btn-reject-notif:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* ── Elegant Bubble Modal ────────────────────────────────────────────────── */
+.reject-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 14, 84, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.reject-modal {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  overflow: hidden;
+  animation: bubbleIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  box-shadow: 
+    0 25px 50px rgba(0, 14, 84, 0.3),
+    0 15px 30px rgba(0, 14, 84, 0.2),
+    0 5px 15px rgba(0, 14, 84, 0.1);
+}
+
+@keyframes bubbleIn {
+  0% {
+    transform: scale(0.3) rotate(-10deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Gradient border effect */
+.reject-modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 3px;
+  background: linear-gradient(135deg, #F76900, #e74c3c, #F76900);
+  border-radius: 24px;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: subtract;
+  -webkit-mask-composite: xor;
+}
+
+.reject-modal-header {
+  background: linear-gradient(135deg, #000E54 0%, #001580 50%, #000E54 100%);
+  padding: 24px 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated background pattern */
+.reject-modal-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(247, 105, 0, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(247, 105, 0, 0.2) 0%, transparent 50%);
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+  33% { transform: translate(10px, -10px) rotate(1deg); }
+  66% { transform: translate(-5px, 5px) rotate(-1deg); }
+}
+
+.reject-modal-header h3 {
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0;
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 2px 10px rgba(0, 14, 84, 0.3);
+}
+
+.close-reject-modal {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 3;
+  backdrop-filter: blur(10px);
+}
+
+.close-reject-modal:hover {
+  background: rgba(247, 105, 0, 0.6);
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 4px 20px rgba(247, 105, 0, 0.4);
+}
+
+.reject-modal-body {
+  padding: 32px 28px;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.reject-modal-body label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #000E54;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#rejectReason {
+  width: 100%;
+  min-height: 120px;
+  padding: 16px 20px;
+  border: 3px solid #e1e5f0;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
+  box-shadow: inset 0 2px 8px rgba(0, 14, 84, 0.05);
+}
+
+#rejectReason:focus {
+  border-color: #F76900;
+  box-shadow: 
+    inset 0 2px 8px rgba(0, 14, 84, 0.05),
+    0 0 0 4px rgba(247, 105, 0, 0.1),
+    0 4px 20px rgba(247, 105, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+#rejectReason::placeholder {
+  color: #a0a7b8;
+  font-style: italic;
+}
+
+.char-counter {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 8px;
+}
+
+.reject-actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.btn-cancel-reject,
+.btn-confirm-reject {
+  flex: 1;
+  padding: 16px 24px;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-cancel-reject {
+  background: linear-gradient(145deg, #f8f9fa 0%, #e9ecef 100%);
+  color: #666;
+  border: 2px solid #dee2e6;
+  box-shadow: 0 4px 15px rgba(108, 117, 125, 0.2);
+}
+
+.btn-cancel-reject:hover {
+  background: linear-gradient(145deg, #e9ecef 0%, #dee2e6 100%);
+  color: #000E54;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(108, 117, 125, 0.3);
+}
+
+.btn-confirm-reject {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 50%, #a93226 100%);
+  color: white;
+  box-shadow: 
+    0 6px 20px rgba(231, 76, 60, 0.4),
+    0 3px 10px rgba(231, 76, 60, 0.3);
+}
+
+.btn-confirm-reject:hover {
+  background: linear-gradient(135deg, #c0392b 0%, #a93226 50%, #922b21 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 
+    0 10px 30px rgba(231, 76, 60, 0.5),
+    0 5px 15px rgba(231, 76, 60, 0.4);
+}
+
+/* Pulse effect for confirm button */
+.btn-confirm-reject::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-confirm-reject:hover::before {
+  left: 100%;
+}
+
+/* Loading states */
+.btn-accept-notif:disabled,
+.btn-reject-notif:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.btn-accept-notif:disabled:hover,
+.btn-reject-notif:disabled:hover {
+  transform: none !important;
+}
+
+/* ── Mobile Responsive ────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .notifications-page {
-    max-width: none;
-    margin: 0;
-    padding: 0 16px;
+    padding: 16px;
   }
 
   .notifications-header {
     flex-direction: column;
+    gap: 16px;
     align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 20px;
   }
 
   .notifications-header h1 {
     font-size: 1.6rem;
   }
 
-  .notifications-header p {
-    font-size: 0.85rem;
-  }
-
   .btn-read-all {
-    align-self: flex-end;
-    padding: 8px 16px;
-    font-size: 0.82rem;
-  }
-
-  .notifications-list {
-    gap: 8px;
+    align-self: flex-start;
+    padding: 10px 16px;
+    font-size: 0.8rem;
   }
 
   .notif-card {
-    padding: 14px 16px;
+    padding: 16px;
     gap: 12px;
   }
 
   .notif-icon {
-    font-size: 1.6rem;
+    font-size: 1.3rem;
+    width: 36px;
+    height: 36px;
   }
 
   .notif-title {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
   }
 
   .notif-message {
-    font-size: 0.82rem;
+    font-size: 0.85rem;
   }
 
-  .notif-time {
-    font-size: 0.72rem;
+  .notif-actions {
+    flex-direction: column;
+    gap: 8px;
   }
 
-  .empty-notifications {
-    padding: 40px 16px;
+  .btn-accept-notif,
+  .btn-reject-notif {
+    padding: 12px 16px;
+    font-size: 0.85rem;
   }
 
-  .empty-notifications .icon {
-    font-size: 3.5rem;
-    margin-bottom: 12px;
+  .reject-modal {
+    margin: 20px;
+    max-width: calc(100vw - 40px);
+    border-radius: 20px;
   }
 
-  .empty-notifications h3 {
+  .reject-modal::before {
+    border-radius: 20px;
+  }
+
+  .reject-modal-header {
+    padding: 20px 24px;
+  }
+
+  .reject-modal-header h3 {
     font-size: 1.1rem;
   }
 
-  .empty-notifications p {
-    font-size: 0.85rem;
+  .close-reject-modal {
+    width: 32px;
+    height: 32px;
+    top: 16px;
+    right: 16px;
+    font-size: 1rem;
+  }
+
+  .reject-modal-body {
+    padding: 24px 20px;
+  }
+
+  #rejectReason {
+    min-height: 100px;
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 14px 16px;
+  }
+
+  .reject-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .btn-cancel-reject,
+  .btn-confirm-reject {
+    padding: 14px 20px;
+    font-size: 0.9rem;
   }
 }
 
 @media (max-width: 480px) {
   .notifications-page {
-    padding: 0 12px;
+    padding: 12px;
   }
 
-  .notifications-header {
-    margin-bottom: 16px;
+  .reject-modal {
+    margin: 10px;
+    max-width: calc(100vw - 20px);
+    border-radius: 16px;
   }
 
-  .notifications-header h1 {
-    font-size: 1.4rem;
+  .reject-modal::before {
+    border-radius: 16px;
   }
 
-  .notifications-header p {
-    font-size: 0.82rem;
-    margin-top: 2px;
+  .reject-modal-header {
+    padding: 16px 20px;
   }
 
-  .btn-read-all {
-    padding: 7px 14px;
-    font-size: 0.78rem;
-  }
-
-  .notif-card {
-    padding: 12px 14px;
-    gap: 10px;
-  }
-
-  .notif-icon {
-    font-size: 1.4rem;
-  }
-
-  .notif-title {
-    font-size: 0.85rem;
-    margin-bottom: 3px;
-  }
-
-  .notif-message {
-    font-size: 0.8rem;
-  }
-
-  .notif-time {
-    font-size: 0.7rem;
-    margin-top: 4px;
-  }
-
-  .notif-unread-dot {
-    width: 8px;
-    height: 8px;
-    margin-top: 4px;
-  }
-
-  .empty-notifications {
-    padding: 32px 12px;
-  }
-
-  .empty-notifications .icon {
-    font-size: 3rem;
-  }
-
-  .empty-notifications h3 {
+  .reject-modal-header h3 {
     font-size: 1rem;
   }
 
-  .empty-notifications p {
-    font-size: 0.8rem;
+  .reject-modal-body {
+    padding: 20px 16px;
+  }
+
+  .close-reject-modal {
+    width: 28px;
+    height: 28px;
+    top: 12px;
+    right: 12px;
+    font-size: 0.9rem;
+  }
+}
+
+/* ── Animation Keyframes ──────────────────────────────────────────────────── */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: scale(0.95);
   }
 }

@@ -54,7 +54,13 @@ function displayProfile() {
   document.getElementById('profileUniversity').textContent = userProfile.university || 'Syracuse University';
 
   if (userProfile.role === 'tutor') {
+    // HIDE student section for tutors
+    document.getElementById('studentSection').style.display = 'none';
+    
     document.getElementById('tutorSections').style.display = 'block';
+    
+    const tutorDashLink = document.getElementById('tutorDashboardLink');
+    if (tutorDashLink) tutorDashLink.style.display = 'flex';
     
     // Fill tutor profile form
     document.getElementById('bioTextarea').value = userProfile.bio || '';
@@ -65,6 +71,16 @@ function displayProfile() {
     
     // Setup add course form with dropdowns
     setupAddCourseForm();
+  } else {
+    // SHOW student section for students
+    document.getElementById('studentSection').style.display = 'block';
+    document.getElementById('tutorSections').style.display = 'none';
+    
+    // Fill student information
+    document.getElementById('studentName').textContent = userProfile.full_name;
+    document.getElementById('studentEmail').textContent = userProfile.email;
+    document.getElementById('studentUniversity').textContent = userProfile.university || 'Syracuse University';
+    document.getElementById('studentRole').textContent = 'Student';
   }
 }
 

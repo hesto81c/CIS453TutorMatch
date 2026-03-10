@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/notifications.css">
+  <link rel="stylesheet" href="/css/recent-searches.css">
 </head>
 <body class="app-body">
 
@@ -22,7 +23,7 @@
     <div class="topnav-right">
       <span class="nav-user">👤 <span id="navUserName">...</span></span>
       <span class="nav-role" id="navUserRole"></span>
-      <a href="/logout" class="nav-logout">Log out</a>
+      <a href="/logout" class="nav-logout">🚪 Logout</a>
     </div>
   </nav>
 
@@ -72,11 +73,7 @@
           <button id="searchBtn" class="btn-search">Search</button>
         </div>
         <div class="quick-chips">
-          <span class="chip" data-q="CSE 274">CSE 274</span>
-          <span class="chip" data-q="CSE 384">CSE 384</span>
-          <span class="chip" data-q="ECS 315">ECS 315</span>
-          <span class="chip" data-q="Calculus">Calculus</span>
-          <span class="chip" data-q="Dr. Wills">Dr. Wills</span>
+          <!-- Recent searches will be populated here dynamically -->
         </div>
       </div>
 

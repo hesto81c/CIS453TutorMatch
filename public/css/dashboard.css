@@ -687,3 +687,174 @@
     width: 280px;
   }
 }
+
+/* ── Recent Searches Styling ─────────────────────────────────────────── */
+
+/* Container for quick chips */
+.quick-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Recent search chips */
+.chip.recent-search {
+  background: linear-gradient(135deg, #F76900 0%, #e05e00 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.chip.recent-search::before {
+  content: '🔍';
+  margin-right: 4px;
+  font-size: 0.7rem;
+}
+
+.chip.recent-search:hover {
+  background: linear-gradient(135deg, #000E54 0%, #001580 100%);
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 14, 84, 0.3);
+}
+
+.chip.recent-search:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Ripple effect for recent searches */
+.chip.recent-search::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.chip.recent-search:active::after {
+  width: 200px;
+  height: 200px;
+}
+
+/* Clear button styling */
+.btn-clear-searches {
+  background: none;
+  border: 1px solid rgba(0, 14, 84, 0.3);
+  color: #666;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  margin-left: auto;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 500;
+}
+
+.btn-clear-searches:hover {
+  background: rgba(0, 14, 84, 0.05);
+  border-color: #000E54;
+  color: #000E54;
+  transform: translateY(-1px);
+}
+
+/* Empty state when no recent searches */
+.quick-chips:empty {
+  display: none;
+}
+
+/* Animation for new chips */
+@keyframes chipSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.chip.recent-search {
+  animation: chipSlideIn 0.3s ease-out;
+}
+
+/* Staggered animation for multiple chips */
+.chip.recent-search:nth-child(1) { animation-delay: 0ms; }
+.chip.recent-search:nth-child(2) { animation-delay: 50ms; }
+.chip.recent-search:nth-child(3) { animation-delay: 100ms; }
+.chip.recent-search:nth-child(4) { animation-delay: 150ms; }
+.chip.recent-search:nth-child(5) { animation-delay: 200ms; }
+
+/* Recent searches label */
+.recent-searches-label {
+  font-size: 0.8rem;
+  color: #666;
+  font-weight: 600;
+  margin-right: 8px;
+  align-self: center;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .quick-chips {
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .chip.recent-search {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    border-radius: 16px;
+  }
+
+  .chip.recent-search::before {
+    font-size: 0.6rem;
+    margin-right: 3px;
+  }
+
+  .btn-clear-searches {
+    padding: 3px 6px;
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-chips {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .btn-clear-searches {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+}
+
+/* Loading state for recent searches */
+.quick-chips.loading::after {
+  content: 'Loading recent searches...';
+  color: #999;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* Enhancement: Add subtle glow to active search */
+.chip.recent-search.active {
+  background: linear-gradient(135deg, #000E54 0%, #001580 100%);
+  box-shadow: 0 0 20px rgba(0, 14, 84, 0.4);
+}

@@ -47,7 +47,7 @@ CREATE TABLE `bookings` (
 
 LOCK TABLES `bookings` WRITE;
 /*!40000 ALTER TABLE `bookings` DISABLE KEYS */;
-INSERT INTO `bookings` VALUES (1,11,12,'CSE 274','2026-04-16 16:05:00','pending','unpaid','','2026-03-08 20:05:49','group'),(2,16,12,'CSE 274','2026-03-23 10:40:00','cancelled','unpaid','','2026-03-09 00:48:19','one_on_one'),(3,15,13,'CSE 274','2026-03-31 11:58:00','cancelled','unpaid','','2026-03-10 01:58:33','group'),(4,15,13,'CSE 274','2026-03-31 11:58:00','cancelled','unpaid','','2026-03-10 01:58:35','group'),(5,16,12,'CIS 453','2026-03-31 15:32:00','cancelled','unpaid','','2026-03-10 02:33:03','one_on_one'),(6,16,15,'PHI 251','2026-03-16 14:48:00','confirmed','unpaid','','2026-03-10 03:48:57','one_on_one'),(7,16,15,'PHI 251','2026-03-27 17:11:00','pending','unpaid','','2026-03-10 04:11:47','group');
+INSERT INTO `bookings` VALUES (1,11,12,'CSE 274','2026-04-16 16:05:00','pending','unpaid','','2026-03-08 20:05:49','group'),(2,16,12,'CSE 274','2026-03-23 10:40:00','cancelled','unpaid','','2026-03-09 00:48:19','one_on_one'),(3,15,13,'CSE 274','2026-03-31 11:58:00','cancelled','unpaid','','2026-03-10 01:58:33','group'),(4,15,13,'CSE 274','2026-03-31 11:58:00','cancelled','unpaid','','2026-03-10 01:58:35','group'),(5,16,12,'CIS 453','2026-03-31 15:32:00','cancelled','unpaid','','2026-03-10 02:33:03','one_on_one'),(6,16,15,'PHI 251','2026-03-16 14:48:00','confirmed','unpaid','','2026-03-10 03:48:57','one_on_one'),(7,16,15,'PHI 251','2026-03-27 17:11:00','cancelled','unpaid','','2026-03-10 04:11:47','group');
 /*!40000 ALTER TABLE `bookings` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -91,12 +91,13 @@ CREATE TABLE `messages` (
   `sender_id` int NOT NULL,
   `content` text NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `read_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `booking_id` (`booking_id`),
   KEY `sender_id` (`sender_id`),
   CONSTRAINT `messages_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE,
   CONSTRAINT `messages_ibfk_2` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -105,6 +106,7 @@ CREATE TABLE `messages` (
 
 LOCK TABLES `messages` WRITE;
 /*!40000 ALTER TABLE `messages` DISABLE KEYS */;
+INSERT INTO `messages` VALUES (1,7,15,'? Decline Reason: I\'m sorry, but I\'m not available at that time. I could offer you another time that day, after 5 pm.','2026-03-10 17:55:13',NULL);
 /*!40000 ALTER TABLE `messages` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -128,7 +130,7 @@ CREATE TABLE `notifications` (
   KEY `user_id` (`user_id`),
   KEY `idx_booking_id` (`booking_id`),
   CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -137,7 +139,7 @@ CREATE TABLE `notifications` (
 
 LOCK TABLES `notifications` WRITE;
 /*!40000 ALTER TABLE `notifications` DISABLE KEYS */;
-INSERT INTO `notifications` VALUES (1,13,'booking_request','? New Booking Request','Alexa Gramm wants to book a session for CSE 274',NULL,0,'2026-03-10 01:58:33'),(2,13,'booking_request','? New Booking Request','Alexa Gramm wants to book a session for CSE 274',NULL,0,'2026-03-10 01:58:35'),(3,12,'booking_request','? New Booking Request','Student Acc wants to book a session for CIS 453',NULL,0,'2026-03-10 02:33:03'),(4,15,'booking_request','? New Booking Request','Student Acc wants to book a session for PHI 251',NULL,1,'2026-03-10 03:48:57'),(5,16,'booking_confirmed','✅ Booking Confirmed!','Alexa Gramm confirmed your session for PHI 251',NULL,0,'2026-03-10 04:07:17'),(6,15,'booking_request','? New Booking Request','Student Acc wants to book a session for PHI 251',7,0,'2026-03-10 04:11:47');
+INSERT INTO `notifications` VALUES (1,13,'booking_request','? New Booking Request','Alexa Gramm wants to book a session for CSE 274',NULL,0,'2026-03-10 01:58:33'),(2,13,'booking_request','? New Booking Request','Alexa Gramm wants to book a session for CSE 274',NULL,0,'2026-03-10 01:58:35'),(3,12,'booking_request','? New Booking Request','Student Acc wants to book a session for CIS 453',NULL,0,'2026-03-10 02:33:03'),(4,15,'booking_request','? New Booking Request','Student Acc wants to book a session for PHI 251',NULL,1,'2026-03-10 03:48:57'),(5,16,'booking_confirmed','✅ Booking Confirmed!','Alexa Gramm confirmed your session for PHI 251',NULL,1,'2026-03-10 04:07:17'),(6,15,'booking_request','? New Booking Request','Student Acc wants to book a session for PHI 251',7,1,'2026-03-10 04:11:47'),(7,16,'booking_declined','❌ Booking Declined','Alexa Gramm declined your session for PHI 251',NULL,1,'2026-03-10 17:55:13'),(8,16,'new_message','? Message from Tutor','Alexa Gramm sent you a message about your PHI 251 session',NULL,1,'2026-03-10 17:55:13');
 /*!40000 ALTER TABLE `notifications` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -390,4 +392,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-10  0:16:00
+-- Dump completed on 2026-03-10 14:53:10

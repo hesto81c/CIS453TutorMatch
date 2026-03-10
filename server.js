@@ -568,6 +568,65 @@ app.patch('/api/tutor-bookings/:id/complete', requireLogin, async (req, res) => 
   }
 });
 
+// ── Add this to your server.js after the existing tutor-bookings endpoints ──
+
+app.patch('/api/tutor-bookings/:id/cancel-confirmed', requireLogin, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    
+    // Verify the booking exists and is confirmed by this tutor
+    const [booking] = await db.query(
+      "SELECT b.*, s.full_name AS student_name, s.email AS student_email, t.full_name AS tutor_name FROM bookings b JOIN users s ON s.id = b.student_id JOIN users t ON t.id = b.tutor_id WHERE b.id = ? AND b.tutor_id = ? AND b.status = 'confirmed'",
+      [req.params.id, req.session.userId]
+    );
+    
+    if (booking.length === 0) {
+      return res.status(400).json({ error: 'Booking not found or not confirmed by you.' });
+    }
+    
+    const bookingData = booking[0];
+    
+    // Update booking status to cancelled
+    const [result] = await db.query(
+      "UPDATE bookings SET status = 'cancelled' WHERE id = ? AND tutor_id = ? AND status = 'confirmed'",
+      [req.params.id, req.session.userId]
+    );
+    
+    if (result.affectedRows === 0) {
+      return res.status(400).json({ error: 'Could not cancel booking.' });
+    }
+    
+    // Send notification to student about cancellation
+    await createNotification(
+      bookingData.student_id, 
+      'session_cancelled', 
+      '⚠️ Session Canceled by Tutor',
+      `${bookingData.tutor_name} had to cancel your ${bookingData.course_code} session`
+    );
+    
+    // Send cancellation reason as a message
+    if (reason && reason.trim()) {
+      await db.query(
+        'INSERT INTO messages (booking_id, sender_id, content) VALUES (?, ?, ?)',
+        [req.params.id, req.session.userId, `⚠️ Session Cancellation: ${reason.trim()}`]
+      );
+      
+      // Notify student of new message
+      await createNotification(
+        bookingData.student_id, 
+        'new_message', 
+        '💬 Cancellation Message',
+        `${bookingData.tutor_name} sent you a message about your ${bookingData.course_code} session cancellation`
+      );
+    }
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Cancel confirmed booking error:', err);
+    res.status(500).json({ error: 'Could not cancel session.' });
+  }
+});
+
 // ── Reviews ───────────────────────────────────────────────────────────
 app.post('/api/reviews', requireLogin, async (req, res) => {
   const { booking_id, rating, comment } = req.body;
@@ -1017,6 +1076,162 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => console.log('🔌 Socket disconnected:', socket.id));
+});
+
+// ── Conversations endpoint - REPLACE in server.js ──
+// This ensures cancelled sessions with decline messages appear in chat
+
+app.get('/api/conversations', requireLogin, async (req, res) => {
+  const userId = req.session.user.id;
+  
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        b.id AS booking_id, 
+        b.course_code, 
+        b.status, 
+        b.session_type,
+        b.created_at,
+        CASE WHEN b.student_id = ? THEN tutor.full_name ELSE student.full_name END AS other_name,
+        CASE WHEN b.student_id = ? THEN b.tutor_id ELSE b.student_id END AS other_id,
+        CASE WHEN b.student_id = ? THEN tutor.full_name ELSE student.full_name END AS tutor_name,
+        CASE WHEN b.student_id = ? THEN student.full_name ELSE tutor.full_name END AS student_name,
+        (SELECT content FROM messages WHERE booking_id = b.id ORDER BY created_at DESC LIMIT 1) AS last_message,
+        (SELECT created_at FROM messages WHERE booking_id = b.id ORDER BY created_at DESC LIMIT 1) AS last_message_at,
+        (SELECT COUNT(*) FROM messages WHERE booking_id = b.id AND sender_id != ? AND read_at IS NULL) AS unread_count
+      FROM bookings b
+      JOIN users student ON student.id = b.student_id
+      JOIN users tutor ON tutor.id = b.tutor_id
+      WHERE (b.student_id = ? OR b.tutor_id = ?) 
+        AND (
+          b.status IN ('confirmed', 'completed') 
+          OR (b.status = 'cancelled' AND EXISTS (SELECT 1 FROM messages WHERE booking_id = b.id))
+        )
+      ORDER BY 
+        COALESCE(last_message_at, b.created_at) DESC
+    `, [userId, userId, userId, userId, userId, userId, userId]);
+    
+    console.log(`Conversations for user ${userId}:`, rows);
+    res.json(rows);
+  } catch (error) {
+    console.error('Conversations error:', error);
+    res.status(500).json({ error: 'Failed to load conversations' });
+  }
+});
+
+// Get messages for a specific conversation
+app.get('/api/conversations/:bookingId/messages', requireLogin, async (req, res) => {
+  try {
+    // Verify user has access to this conversation
+    const [booking] = await db.query(
+      'SELECT * FROM bookings WHERE id = ? AND (student_id = ? OR tutor_id = ?)',
+      [req.params.bookingId, req.session.userId, req.session.userId]
+    );
+    
+    if (booking.length === 0) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    
+    // Get messages
+    const [messages] = await db.query(
+      'SELECT * FROM messages WHERE booking_id = ? ORDER BY created_at ASC',
+      [req.params.bookingId]
+    );
+    
+    // Get booking details
+    const [bookingDetails] = await db.query(`
+      SELECT b.*, s.full_name as student_name, t.full_name as tutor_name
+      FROM bookings b
+      JOIN users s ON s.id = b.student_id
+      JOIN users t ON t.id = b.tutor_id  
+      WHERE b.id = ?
+    `, [req.params.bookingId]);
+    
+    res.json({
+      booking: bookingDetails[0],
+      messages: messages
+    });
+  } catch (error) {
+    console.error('Error loading messages:', error);
+    res.status(500).json({ error: 'Could not load messages' });
+  }
+});
+
+// Send a new message
+app.post('/api/conversations/send', requireLogin, async (req, res) => {
+  try {
+    const { booking_id, content } = req.body;
+    
+    if (!booking_id || !content || !content.trim()) {
+      return res.status(400).json({ error: 'Missing booking_id or content' });
+    }
+    
+    // Verify user has access to this conversation
+    const [booking] = await db.query(
+      'SELECT * FROM bookings WHERE id = ? AND (student_id = ? OR tutor_id = ?)',
+      [booking_id, req.session.userId, req.session.userId]
+    );
+    
+    if (booking.length === 0) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    
+    // Insert message
+    const [result] = await db.query(
+      'INSERT INTO messages (booking_id, sender_id, content) VALUES (?, ?, ?)',
+      [booking_id, req.session.userId, content.trim()]
+    );
+    
+    // Get the inserted message with sender info
+    const [newMessage] = await db.query(`
+      SELECT m.*, u.full_name as sender_name
+      FROM messages m
+      JOIN users u ON u.id = m.sender_id
+      WHERE m.id = ?
+    `, [result.insertId]);
+    
+    // Notify other participant via socket
+    const bookingData = booking[0];
+    const recipientId = req.session.userId === bookingData.student_id ? bookingData.tutor_id : bookingData.student_id;
+    
+    if (io) {
+      io.to(`user_${recipientId}`).emit('new_message', {
+        booking_id: booking_id,
+        message: newMessage[0]
+      });
+    }
+    
+    // Create notification for recipient
+    const [sender] = await db.query('SELECT full_name FROM users WHERE id = ?', [req.session.userId]);
+    await createNotification(
+      recipientId,
+      'new_message',
+      '💬 New Message',
+      `${sender[0].full_name} sent you a message`,
+      booking_id
+    );
+    
+    res.json({ success: true, message: newMessage[0] });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: 'Could not send message' });
+  }
+});
+
+// Mark conversation as read
+app.post('/api/conversations/:bookingId/read', requireLogin, async (req, res) => {
+  try {
+    // Mark all messages in this conversation as read by current user
+    await db.query(
+      'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE booking_id = ? AND sender_id != ? AND read_at IS NULL',
+      [req.params.bookingId, req.session.userId]
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marking as read:', error);
+    res.status(500).json({ error: 'Could not mark as read' });
+  }
 });
 
 // ── Start ─────────────────────────────────────────────────────────────

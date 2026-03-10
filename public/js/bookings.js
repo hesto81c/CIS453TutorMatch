@@ -1,469 +1,540 @@
-let currentUser = null;
-let bookings = [];
+// ── My Bookings page ─────────────────────────────────────────────────
 
-// Initialize page
-document.addEventListener('DOMContentLoaded', async function() {
-  await loadCurrentUser();
-  await loadBookings();
-  displayBookings();
-  
-  // Check for URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('gcal') === 'success') {
-    showFeedback('Calendar event added successfully! 📅', 'success');
-  } else if (urlParams.get('gcal') === 'error') {
-    showFeedback('Could not add to calendar. Try again.', 'error');
-  }
-});
+const sessionTypeLabels = {
+  one_on_one: '👤 1-on-1',
+  group:      '👥 Group',
+  resources:  '📚 Resources'
+};
 
-async function loadCurrentUser() {
-  try {
-    const response = await fetch('/api/me');
-    if (response.ok) {
-      currentUser = await response.json();
+fetch('/api/me')
+  .then(res => res.json())
+  .then(user => {
+    console.log('USER DEBUG:', user);
+    document.getElementById('navUserName').textContent = user.full_name;
+    const roleEl = document.getElementById('navUserRole');
+    if (roleEl) roleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+    if (user.role === 'tutor') {
+      const link = document.getElementById('tutorDashLink');
+      if (link) link.style.display = 'flex';
     }
-  } catch (error) {
-    console.error('Error loading user:', error);
-  }
+  })
+  .catch(() => window.location.href = '/');
+
+fetch('/api/bookings')
+  .then(res => res.json())
+  .then(bookings => {
+    console.log('BOOKINGS DEBUG:', bookings);
+    document.getElementById('loadingState').classList.add('hidden');
+
+    if (!bookings || bookings.length === 0) {
+      document.getElementById('emptyState').classList.remove('hidden');
+      return;
+    }
+
+    const list = document.getElementById('bookingsList');
+    list.classList.remove('hidden');
+
+    list.innerHTML = bookings.map(b => {
+      console.log(`Booking ${b.id}: status=${b.status}, payment_status=${b.payment_status}, hourly_rate=${b.hourly_rate}`);
+      
+      const date    = new Date(b.scheduled_at);
+      const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+      const statusLabel = {
+        pending:   '⏳ Pending',
+        confirmed: '✅ Confirmed',
+        cancelled: '❌ Cancelled',
+        completed: '🎓 Completed'
+      }[b.status] || b.status;
+
+      const sessionLabel = sessionTypeLabels[b.session_type] || '👤 1-on-1';
+      const canCancel    = b.status === 'pending';
+      const canReview    = b.status === 'completed';
+      const canPay       = b.status === 'confirmed' && (!b.payment_status || b.payment_status === 'pending');
+      const isResources  = b.session_type === 'resources';
+
+      console.log(`Booking ${b.id} - canPay: ${canPay} (status: ${b.status}, payment_status: ${b.payment_status})`);
+
+      return `
+        <div class="booking-card status-${b.status}" id="booking-${b.id}">
+          <div class="booking-info">
+            <div class="booking-tutor">👨‍🏫 ${b.tutor_name}</div>
+            <span class="booking-course">${b.course_code}</span>
+            <span class="session-type-badge">${sessionLabel}</span>
+            ${!isResources
+              ? `<div class="booking-date">📅 ${dateStr} at ${timeStr}</div>`
+              : `<div class="booking-date">📚 Tutor will share materials after confirming</div>`
+            }
+            ${b.message ? `<div class="booking-message">"${b.message}"</div>` : ''}
+            <div style="font-size:0.82rem;color:#aaa;margin-top:6px;">
+              $${parseFloat(b.hourly_rate).toFixed(2)}/hr
+              ${b.is_verified ? '· ✅ Verified Tutor' : ''}
+            </div>
+            ${b.payment_status && b.payment_status !== 'pending' ? `<div style="font-size:0.8rem;color:#27ae60;margin-top:4px;font-weight:600;">💳 Payment: ${b.payment_status}</div>` : ''}
+          </div>
+          <div class="booking-right">
+            <span class="status-badge ${b.status}">${statusLabel}</span>
+            ${canCancel ? `<button class="btn-cancel-booking" onclick="cancelBooking(${b.id})">Cancel</button>` : ''}
+            ${canPay ? `<button class="btn-pay-booking" onclick="openPaymentModal(${b.id}, '${b.tutor_name.replace(/'/g, "\\'")}', ${b.hourly_rate})">💳 Pay Now</button>` : ''}
+            ${canReview ? `<button class="btn-submit-review" onclick="toggleReviewForm(${b.id})" id="reviewBtn-${b.id}">⭐ Leave Review</button>` : ''}
+          </div>
+        </div>
+        ${canReview ? `
+          <div id="reviewForm-${b.id}" class="review-form-card hidden">
+            <h4>⭐ Rate your session with ${b.tutor_name}</h4>
+            <div class="star-picker" id="stars-${b.id}">
+              <span data-val="1">★</span><span data-val="2">★</span>
+              <span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+            </div>
+            <textarea id="comment-${b.id}" placeholder="Share your experience (optional)..."></textarea>
+            <br>
+            <button class="btn-submit-review" onclick="submitReview(${b.id})">Submit Review</button>
+            <span id="reviewFeedback-${b.id}" style="margin-left:10px;font-size:0.85rem;"></span>
+          </div>
+        ` : ''}
+      `;
+    }).join('');
+
+    document.querySelectorAll('.star-picker').forEach(picker => {
+      let selected = 0;
+      picker.querySelectorAll('span').forEach(star => {
+        star.addEventListener('mouseover', () => highlightStars(picker, parseInt(star.dataset.val)));
+        star.addEventListener('mouseout',  () => highlightStars(picker, selected));
+        star.addEventListener('click', () => {
+          selected = parseInt(star.dataset.val);
+          picker.dataset.rating = selected;
+          highlightStars(picker, selected);
+        });
+      });
+    });
+  })
+  .catch(err => {
+    console.error('Bookings error:', err);
+    document.getElementById('loadingState').textContent = 'Could not load bookings.';
+  });
+
+function highlightStars(picker, count) {
+  picker.querySelectorAll('span').forEach(s => {
+    s.classList.toggle('lit', parseInt(s.dataset.val) <= count);
+  });
 }
 
-async function loadBookings() {
-  try {
-    const response = await fetch('/api/bookings');
-    if (response.ok) {
-      bookings = await response.json();
-    }
-  } catch (error) {
-    console.error('Error loading bookings:', error);
-  }
+function toggleReviewForm(id) {
+  document.getElementById(`reviewForm-${id}`).classList.toggle('hidden');
 }
 
-function displayBookings() {
-  const container = document.getElementById('bookingsList');
-  
-  if (bookings.length === 0) {
-    container.innerHTML = `
-      <div class="empty-bookings">
-        <div class="empty-icon">📚</div>
-        <h3>No bookings yet</h3>
-        <p>Start your learning journey by booking a session with a tutor who has already mastered your course!</p>
-        <a href="/dashboard">Find a Tutor</a>
-      </div>
-    `;
+async function submitReview(bookingId) {
+  const picker   = document.getElementById(`stars-${bookingId}`);
+  const rating   = parseInt(picker.dataset.rating || 0);
+  const comment  = document.getElementById(`comment-${bookingId}`).value;
+  const feedback = document.getElementById(`reviewFeedback-${bookingId}`);
+
+  if (!rating) {
+    feedback.textContent = '⚠️ Please select a star rating.';
+    feedback.style.color = '#e74c3c';
     return;
   }
 
-  const bookingsHTML = bookings.map(booking => createBookingCard(booking)).join('');
-  container.innerHTML = bookingsHTML;
-}
+  try {
+    const res  = await fetch('/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id: bookingId, rating, comment })
+    });
+    const data = await res.json();
 
-function createBookingCard(booking) {
-  const date = new Date(booking.scheduled_at);
-  const formattedDate = date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  const formattedTime = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-
-  const sessionIcons = {
-    'one_on_one': '👨‍🏫',
-    'group': '👥',
-    'resources': '📚'
-  };
-
-  const sessionLabels = {
-    'one_on_one': '1-on-1',
-    'group': 'Group',
-    'resources': 'Resources'
-  };
-
-  // Payment status logic
-  const showPayButton = booking.status === 'confirmed' && booking.payment_status === 'unpaid';
-  const showCalendarButton = booking.status === 'confirmed' && booking.payment_status === 'paid';
-
-  let actionButtons = '';
-  
-  if (booking.status === 'pending') {
-    actionButtons = `<button class="btn-cancel-booking" onclick="cancelBooking(${booking.id})">Cancel</button>`;
-  } else if (showPayButton) {
-    actionButtons = `
-      <button class="btn-pay-now" onclick="openPaymentModal(${booking.id}, ${booking.hourly_rate})">
-        💳 Pay Now
-      </button>
-      <div class="payment-status-badge unpaid">Payment Required</div>
-    `;
-  } else if (showCalendarButton) {
-    actionButtons = `
-      <button class="btn-gcal" onclick="addToGoogleCalendar(${booking.id})" id="gcal-btn-${booking.id}">
-        📅 Add to Calendar
-      </button>
-      <div class="payment-status-badge paid">✓ Paid</div>
-    `;
-  } else if (booking.payment_status === 'paid') {
-    actionButtons = `<div class="payment-status-badge paid">✓ Paid</div>`;
+    if (!res.ok) {
+      feedback.textContent = data.error || 'Could not submit.';
+      feedback.style.color = '#e74c3c';
+    } else {
+      feedback.textContent = '✅ Review submitted!';
+      feedback.style.color = '#27ae60';
+      const btn = document.getElementById(`reviewBtn-${bookingId}`);
+      if (btn) btn.remove();
+      setTimeout(() => document.getElementById(`reviewForm-${bookingId}`).classList.add('hidden'), 2000);
+    }
+  } catch {
+    feedback.textContent = 'Network error.';
+    feedback.style.color = '#e74c3c';
   }
-
-  return `
-    <div class="booking-card status-${booking.status}">
-      <div class="booking-info">
-        <div class="booking-tutor">${booking.tutor_name}</div>
-        <div>
-          <span class="booking-course">${booking.course_code}</span>
-          <span class="session-type-badge">
-            ${sessionIcons[booking.session_type]} ${sessionLabels[booking.session_type]}
-          </span>
-        </div>
-        <div class="booking-date">📅 ${formattedDate} at ${formattedTime}</div>
-        ${booking.message ? `<div class="booking-message">"${booking.message}"</div>` : ''}
-      </div>
-      <div class="booking-right">
-        <span class="status-badge ${booking.status}">${booking.status}</span>
-        ${actionButtons}
-      </div>
-    </div>
-  `;
 }
 
-async function cancelBooking(bookingId) {
+function cancelBooking(id) {
   if (!confirm('Are you sure you want to cancel this booking?')) return;
-
-  try {
-    const response = await fetch(`/api/bookings/${bookingId}/cancel`, {
-      method: 'PATCH'
-    });
-
-    if (response.ok) {
-      await loadBookings();
-      displayBookings();
-      showFeedback('Booking cancelled successfully', 'success');
-    } else {
-      const error = await response.json();
-      showFeedback(error.error || 'Could not cancel booking', 'error');
-    }
-  } catch (error) {
-    showFeedback('Network error. Please try again.', 'error');
-  }
+  fetch(`/api/bookings/${id}/cancel`, { method: 'PATCH' })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        const card = document.getElementById(`booking-${id}`);
+        card.classList.remove('status-pending');
+        card.classList.add('status-cancelled');
+        card.querySelector('.status-badge').className = 'status-badge cancelled';
+        card.querySelector('.status-badge').textContent = '❌ Cancelled';
+        const btn = card.querySelector('.btn-cancel-booking');
+        if (btn) btn.remove();
+      }
+    })
+    .catch(() => alert('Could not cancel. Please try again.'));
 }
 
-async function addToGoogleCalendar(bookingId) {
-  const button = document.getElementById(`gcal-btn-${bookingId}`);
-  if (!button) return;
-
-  button.disabled = true;
-  button.innerHTML = '⏳ Adding...';
-
-  try {
-    const response = await fetch(`/api/calendar/add/${bookingId}`, {
-      method: 'POST'
-    });
-    
-    const result = await response.json();
-
-    if (result.success) {
-      button.innerHTML = '✅ Added';
-      showFeedback('Event added to Google Calendar!', 'success');
-    } else if (result.redirect) {
-      window.location.href = result.redirect;
-    } else {
-      throw new Error('Failed to add event');
-    }
-  } catch (error) {
-    button.disabled = false;
-    button.innerHTML = '📅 Add to Calendar';
-    showFeedback('Could not add to calendar. Try again.', 'error');
-  }
-}
-
-// ───────────────────────────────────────────────────────────────────────
-// ── STAGE 9: PAYMENT SYSTEM ───────────────────────────────────────────
-// ───────────────────────────────────────────────────────────────────────
-
-let paymentModal = null;
-let currentBookingForPayment = null;
-
-function openPaymentModal(bookingId, hourlyRate) {
-  currentBookingForPayment = bookingId;
-  const booking = bookings.find(b => b.id === bookingId);
-  if (!booking) return;
-
-  const amount = hourlyRate;
+// Payment Modal Functions
+function openPaymentModal(bookingId, tutorName, hourlyRate) {
+  console.log('Opening payment modal for:', { bookingId, tutorName, hourlyRate });
   
-  paymentModal = document.createElement('div');
-  paymentModal.className = 'modal-overlay';
-  paymentModal.innerHTML = `
-    <div class="modal">
-      <div class="modal-header">
-        <h2>💳 Complete Payment</h2>
-        <button class="modal-close" onclick="closePaymentModal()">×</button>
-      </div>
-      <div class="modal-body">
-        <div class="modal-tutor-info">
-          <div class="modal-avatar">${booking.tutor_name.charAt(0)}</div>
-          <div>
-            <div class="modal-tutor-name">${booking.tutor_name}</div>
-            <div class="modal-tutor-rate">$${hourlyRate}/hour</div>
-          </div>
+  const container = document.getElementById('payment-modal-container');
+  if (!container) {
+    console.error('Payment modal container not found!');
+    alert('Payment modal container not found. Please refresh the page.');
+    return;
+  }
+  
+  const subtotal = parseFloat(hourlyRate);
+  const nyTax = subtotal * 0.0825; // 8.25% NY tax
+  const total = subtotal + nyTax;
+  
+  const modalHTML = `
+    <div class="payment-modal">
+      <div class="payment-container">
+        <div class="payment-header">
+          <span style="font-size: 1.5rem;">💳</span>
+          <h2>Complete Payment</h2>
+          <button class="close-btn" onclick="closePaymentModal()">×</button>
         </div>
+        
+        <div class="payment-body">
+          <!-- Tutor Info -->
+          <div class="tutor-info">
+            <div class="tutor-avatar">${tutorName.charAt(0).toUpperCase()}</div>
+            <div class="tutor-details">
+              <h3>${tutorName}</h3>
+              <div class="tutor-rate">$${subtotal.toFixed(2)}/hour</div>
+            </div>
+          </div>
 
-        <div class="payment-summary">
-          <h4>💰 Payment Summary</h4>
-          <div class="payment-row">
-            <span>Session fee:</span>
-            <span>$${amount}.00</span>
-          </div>
-          <div class="payment-row">
-            <span>Platform fee:</span>
-            <span>$0.00</span>
-          </div>
-          <div class="payment-row">
-            <span>Total:</span>
-            <span>$${amount}.00</span>
-          </div>
-        </div>
-
-        <div id="paymentForm">
-          <div class="payment-form">
-            <div class="input-group">
-              <label>Card Number</label>
-              <div class="card-input">
-                <span class="card-icon">💳</span>
-                <input type="text" id="cardNumber" placeholder="4242 4242 4242 4242" maxlength="19" 
-                       oninput="formatCardNumber(this)" autocomplete="cc-number">
-              </div>
+          <!-- Payment Summary -->
+          <div class="payment-summary">
+            <div class="summary-header">
+              <span>💰</span>
+              <span>Payment Summary</span>
             </div>
             
-            <div class="card-row">
-              <div class="input-group">
-                <label>Expiry Date</label>
-                <div class="card-input">
-                  <span class="card-icon">📅</span>
-                  <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5" 
-                         oninput="formatExpiry(this)" autocomplete="cc-exp">
+            <div class="summary-row">
+              <span class="summary-label">Session fee:</span>
+              <span class="summary-value">$${subtotal.toFixed(2)}</span>
+            </div>
+            
+            <div class="summary-row">
+              <span class="summary-label">NY State Tax (8.25%):</span>
+              <span class="summary-value">$${nyTax.toFixed(2)}</span>
+            </div>
+            
+            <div class="summary-row">
+              <span class="summary-label">Platform fee:</span>
+              <span class="summary-value">$0.00</span>
+            </div>
+            
+            <div class="summary-row summary-total">
+              <span class="summary-label">Total:</span>
+              <span class="summary-value">$${total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <!-- Payment Methods -->
+          <div class="payment-methods">
+            <h3>Choose Payment Method</h3>
+            <div class="payment-options">
+              <!-- Google Pay -->
+              <label class="payment-option">
+                <input type="radio" name="payment-method" value="google-pay">
+                <div class="payment-option-content">
+                  <img src="https://developers.google.com/pay/api/web/guides/brand-guidelines/assets/google-pay-mark_800.png" alt="Google Pay" class="payment-logo" onerror="this.style.display='none'">
+                  <div class="payment-option-info">
+                    <div class="payment-option-title">Google Pay</div>
+                    <div class="payment-option-desc">Pay with your Google account</div>
+                  </div>
                 </div>
-              </div>
-              <div class="input-group">
-                <label>CVC</label>
-                <div class="card-input">
-                  <span class="card-icon">🔒</span>
-                  <input type="text" id="cardCvc" placeholder="123" maxlength="4" 
-                         oninput="formatCvc(this)" autocomplete="cc-csc">
+              </label>
+
+              <!-- Apple Pay -->
+              <label class="payment-option">
+                <input type="radio" name="payment-method" value="apple-pay">
+                <div class="payment-option-content">
+                  <img src="https://developer.apple.com/assets/elements/badges/apple-pay-badge.svg" alt="Apple Pay" class="payment-logo" style="background: black; padding: 4px;" onerror="this.style.display='none'">
+                  <div class="payment-option-info">
+                    <div class="payment-option-title">Apple Pay</div>
+                    <div class="payment-option-desc">Pay with Touch ID or Face ID</div>
+                  </div>
                 </div>
+              </label>
+
+              <!-- PayPal -->
+              <label class="payment-option">
+                <input type="radio" name="payment-method" value="paypal">
+                <div class="payment-option-content">
+                  <img src="https://www.paypalobjects.com/webstatic/mktg/Logo/pp-logo-200px.png" alt="PayPal" class="payment-logo" onerror="this.style.display='none'">
+                  <div class="payment-option-info">
+                    <div class="payment-option-title">PayPal</div>
+                    <div class="payment-option-desc">Pay with your PayPal account</div>
+                  </div>
+                </div>
+              </label>
+
+              <!-- Credit/Debit Card -->
+              <label class="payment-option" id="card-option">
+                <input type="radio" name="payment-method" value="credit-card" checked>
+                <div class="payment-option-content">
+                  <img src="https://cdn-icons-png.flaticon.com/512/349/349221.png" alt="Credit Card" class="payment-logo" onerror="this.style.display='none'">
+                  <div class="payment-option-info">
+                    <div class="payment-option-title">Credit or Debit Card</div>
+                    <div class="payment-option-desc">Visa, Mastercard, American Express</div>
+                  </div>
+                  <div class="card-logos">
+                    <img src="https://cdn.worldvectorlogo.com/logos/visa.svg" alt="Visa" class="card-logo" onerror="this.style.display='none'">
+                    <img src="https://cdn.worldvectorlogo.com/logos/mastercard.svg" alt="Mastercard" class="card-logo" onerror="this.style.display='none'">
+                    <img src="https://cdn.worldvectorlogo.com/logos/american-express.svg" alt="American Express" class="card-logo" onerror="this.style.display='none'">
+                    <img src="https://cdn.worldvectorlogo.com/logos/discover.svg" alt="Discover" class="card-logo" onerror="this.style.display='none'">
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Card Form -->
+          <div class="card-form active" id="card-form">
+            <div class="form-group">
+              <label class="form-label">Card Number</label>
+              <input 
+                type="text" 
+                class="form-input" 
+                placeholder="1234 5678 9012 3456"
+                maxlength="19"
+                id="cardNumber"
+              >
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Expiry Date</label>
+                <input 
+                  type="text" 
+                  class="form-input" 
+                  placeholder="MM/YY"
+                  maxlength="5"
+                  id="expiryDate"
+                >
+              </div>
+              <div class="form-group">
+                <label class="form-label">CVC</label>
+                <input 
+                  type="text" 
+                  class="form-input" 
+                  placeholder="123"
+                  maxlength="4"
+                  id="cvc"
+                >
               </div>
             </div>
 
-            <div class="input-group">
-              <label>Cardholder Name</label>
-              <input type="text" id="cardName" placeholder="John Doe" autocomplete="cc-name">
+            <div class="form-group">
+              <label class="form-label">Cardholder Name</label>
+              <input 
+                type="text" 
+                class="form-input" 
+                placeholder="John Doe"
+                id="cardholderName"
+              >
             </div>
+          </div>
 
-            <div class="payment-note">
-              <span class="icon">🔒</span>
-              <div>
-                <strong>Demo Mode:</strong> This is a mock payment system for demonstration. 
-                Use card number 4242 4242 4242 4242 with any future date and CVC.
-              </div>
-            </div>
+          <div class="tax-info">
+            <strong>NY Sales Tax:</strong> 8.25% tax is automatically calculated based on your New York location for tutoring services.
+          </div>
 
-            <div id="paymentError" class="payment-error" style="display: none;"></div>
+          <div class="security-info">
+            <span>🔒</span>
+            <span>Your payment is secured with 256-bit SSL encryption</span>
+          </div>
+
+          <div class="payment-actions">
+            <button type="button" class="btn-cancel" onclick="closePaymentModal()">Cancel</button>
+            <button type="button" class="btn-pay" id="pay-button" onclick="processPayment(${bookingId}, ${total.toFixed(2)})">💳 Pay $${total.toFixed(2)}</button>
           </div>
         </div>
-
-        <div id="paymentSuccess" class="payment-success" style="display: none;">
-          <div class="icon">✅</div>
-          <h3>Payment Successful!</h3>
-          <p>Your session is now fully confirmed and paid.</p>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-cancel-modal" onclick="closePaymentModal()">Cancel</button>
-        <button class="btn-process-payment" onclick="processPayment()" id="payBtn">
-          💳 Pay $${amount}.00
-        </button>
       </div>
     </div>
   `;
   
-  document.body.appendChild(paymentModal);
-  document.getElementById('cardNumber').focus();
+  container.innerHTML = modalHTML;
+  
+  // Initialize modal functionality
+  initializePaymentModal();
+}
+
+function initializePaymentModal() {
+  // Auto-format card number
+  const cardNumberInput = document.getElementById('cardNumber');
+  if (cardNumberInput) {
+    cardNumberInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\s/g, '');
+      let formattedValue = value.replace(/(.{4})/g, '$1 ');
+      e.target.value = formattedValue.trim();
+    });
+  }
+
+  // Auto-format expiry date
+  const expiryInput = document.getElementById('expiryDate');
+  if (expiryInput) {
+    expiryInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length >= 2) {
+        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+      }
+      e.target.value = value;
+    });
+  }
+
+  // Only allow numbers for CVC
+  const cvcInput = document.getElementById('cvc');
+  if (cvcInput) {
+    cvcInput.addEventListener('input', function(e) {
+      e.target.value = e.target.value.replace(/\D/g, '');
+    });
+  }
+
+  // Handle payment method selection
+  document.querySelectorAll('input[name="payment-method"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      // Remove selected class from all options
+      document.querySelectorAll('.payment-option').forEach(option => {
+        option.classList.remove('selected');
+      });
+      
+      // Add selected class to current option
+      this.closest('.payment-option').classList.add('selected');
+      
+      // Show/hide card form
+      const cardForm = document.getElementById('card-form');
+      const payButton = document.getElementById('pay-button');
+      
+      if (this.value === 'credit-card') {
+        cardForm.classList.add('active');
+        payButton.innerHTML = payButton.innerHTML.replace(/Pay with .+/, 'Pay $' + payButton.innerHTML.match(/\$[\d.]+/)[0].substring(1));
+      } else {
+        cardForm.classList.remove('active');
+        if (this.value === 'google-pay') {
+          payButton.innerHTML = payButton.innerHTML.replace(/💳 Pay \$/, 'Pay with Google Pay $');
+        } else if (this.value === 'apple-pay') {
+          payButton.innerHTML = payButton.innerHTML.replace(/💳 Pay \$/, 'Pay with Apple Pay $');
+        } else if (this.value === 'paypal') {
+          payButton.innerHTML = payButton.innerHTML.replace(/💳 Pay \$/, 'Pay with PayPal $');
+        }
+      }
+    });
+  });
+
+  // Set initial selected state
+  const defaultSelected = document.querySelector('input[name="payment-method"]:checked');
+  if (defaultSelected) {
+    defaultSelected.closest('.payment-option').classList.add('selected');
+  }
 }
 
 function closePaymentModal() {
-  if (paymentModal) {
-    document.body.removeChild(paymentModal);
-    paymentModal = null;
-    currentBookingForPayment = null;
+  const modal = document.querySelector('.payment-modal');
+  if (modal) {
+    modal.style.opacity = '0';
+    setTimeout(() => {
+      const container = document.getElementById('payment-modal-container');
+      if (container) {
+        container.innerHTML = '';
+      }
+    }, 300);
   }
 }
 
-function formatCardNumber(input) {
-  let value = input.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-  let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
-  input.value = formattedValue;
-}
-
-function formatExpiry(input) {
-  let value = input.value.replace(/\D/g, '');
-  if (value.length >= 2) {
-    value = value.substring(0, 2) + '/' + value.substring(2, 4);
-  }
-  input.value = value;
-}
-
-function formatCvc(input) {
-  input.value = input.value.replace(/\D/g, '');
-}
-
-async function processPayment() {
-  const cardNumber = document.getElementById('cardNumber').value.replace(/\s/g, '');
-  const cardExpiry = document.getElementById('cardExpiry').value;
-  const cardCvc = document.getElementById('cardCvc').value;
-  const cardName = document.getElementById('cardName').value;
-  const payBtn = document.getElementById('payBtn');
-  const paymentError = document.getElementById('paymentError');
-
-  // Reset error
-  paymentError.style.display = 'none';
-
-  // Basic validation
-  if (!cardNumber || cardNumber.length < 13) {
-    showPaymentError('Please enter a valid card number');
-    return;
-  }
-  if (!cardExpiry || !cardExpiry.includes('/')) {
-    showPaymentError('Please enter a valid expiry date (MM/YY)');
-    return;
-  }
-  if (!cardCvc || cardCvc.length < 3) {
-    showPaymentError('Please enter a valid CVC');
-    return;
-  }
-  if (!cardName.trim()) {
-    showPaymentError('Please enter the cardholder name');
-    return;
-  }
-
-  // Show loading state
+async function processPayment(bookingId, amount) {
+  console.log('Processing payment for booking:', bookingId, 'amount:', amount);
+  
+  const selectedMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'credit-card';
+  const payBtn = document.getElementById('pay-button');
+  
+  // Disable button and show loading
   payBtn.disabled = true;
-  payBtn.innerHTML = `<span class="payment-loading"></span> Processing...`;
-
+  
   try {
-    const booking = bookings.find(b => b.id === currentBookingForPayment);
+    if (selectedMethod === 'google-pay') {
+      payBtn.innerHTML = '⏳ Processing Google Pay...';
+    } else if (selectedMethod === 'apple-pay') {
+      payBtn.innerHTML = '⏳ Processing Apple Pay...';
+    } else if (selectedMethod === 'paypal') {
+      payBtn.innerHTML = '⏳ Redirecting to PayPal...';
+    } else {
+      payBtn.innerHTML = '⏳ Processing Card...';
+    }
+
+    // Call payment API
     const response = await fetch('/api/payments/process', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        booking_id: currentBookingForPayment,
-        amount: booking.hourly_rate,
+        booking_id: bookingId,
         payment_method: {
-          last4: cardNumber.slice(-4),
-          name: cardName
-        }
+          type: selectedMethod,
+          last4: selectedMethod === 'credit-card' ? '4242' : null,
+          name: selectedMethod === 'credit-card' ? document.getElementById('cardholderName')?.value : 'Online Payment'
+        },
+        amount: amount
       })
     });
 
     const result = await response.json();
+    console.log('Payment result:', result);
 
     if (result.success) {
-      // Show success state
-      document.getElementById('paymentForm').style.display = 'none';
-      document.getElementById('paymentSuccess').style.display = 'block';
-      document.querySelector('.modal-footer').style.display = 'none';
+      alert(`Payment successful! 🎉\nPayment ID: ${result.payment_id}`);
+      closePaymentModal();
       
-      // Auto close after 3 seconds and refresh bookings
-      setTimeout(async () => {
-        closePaymentModal();
-        await loadBookings();
-        displayBookings();
-        showFeedback('Payment successful! Session confirmed. 💰', 'success');
-      }, 3000);
-
+      // Refresh bookings to show payment status
+      window.location.reload();
     } else {
       payBtn.disabled = false;
-      payBtn.innerHTML = `💳 Pay $${booking.hourly_rate}.00`;
-      showPaymentError(result.message || 'Payment failed. Please try again.');
+      payBtn.innerHTML = `💳 Pay $${amount}`;
+      alert(`Payment failed: ${result.message || 'Unknown error'}`);
     }
-
   } catch (error) {
     payBtn.disabled = false;
-    payBtn.innerHTML = `💳 Pay $${booking.hourly_rate}.00`;
-    showPaymentError('Network error. Please try again.');
+    payBtn.innerHTML = `💳 Pay $${amount}`;
+    alert('Payment processing failed. Please try again.');
+    console.error('Payment error:', error);
   }
 }
 
-function showPaymentError(message) {
-  const errorDiv = document.getElementById('paymentError');
-  errorDiv.innerHTML = `⚠️ ${message}`;
-  errorDiv.style.display = 'flex';
-}
-
-function showFeedback(message, type = 'info') {
-  // Create feedback element if it doesn't exist
-  let feedback = document.getElementById('feedback');
-  if (!feedback) {
-    feedback = document.createElement('div');
-    feedback.id = 'feedback';
-    feedback.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-weight: 600;
-      z-index: 10000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      transition: all 0.3s ease;
-    `;
-    document.body.appendChild(feedback);
-  }
-
-  // Set message and style
-  feedback.textContent = message;
-  feedback.className = type;
-
-  if (type === 'success') {
-    feedback.style.background = '#00d4aa';
-    feedback.style.color = 'white';
-  } else if (type === 'error') {
-    feedback.style.background = '#e74c3c';
-    feedback.style.color = 'white';
-  } else {
-    feedback.style.background = '#F76900';
-    feedback.style.color = 'white';
-  }
-
-  // Show and auto-hide
-  feedback.style.display = 'block';
-  feedback.style.opacity = '1';
-
-  setTimeout(() => {
-    if (feedback) {
-      feedback.style.opacity = '0';
-      setTimeout(() => {
-        if (feedback && feedback.parentNode) {
-          feedback.parentNode.removeChild(feedback);
-        }
-      }, 300);
-    }
-  }, 3000);
-}
-
-// Close modal when clicking outside
-document.addEventListener('click', function(e) {
-  if (e.target.classList.contains('modal-overlay')) {
-    closePaymentModal();
-  }
-});
-
-// Close modal with Escape key
+// Close modal on ESC key
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     closePaymentModal();
   }
 });
+
+// ── Notification badge ────────────────────────────────────────────────
+function loadNotifBadge() {
+  fetch('/api/notifications/unread-count')
+    .then(r => r.json())
+    .then(data => {
+      const badge = document.getElementById('sidebarBadge');
+      if (!badge) return;
+      if (data.count > 0) {
+        badge.textContent = data.count;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    })
+    .catch(err => console.log('Notification badge error:', err));
+}
+
+loadNotifBadge();
+setInterval(loadNotifBadge, 30000);

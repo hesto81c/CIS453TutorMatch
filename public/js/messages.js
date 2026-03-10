@@ -1,172 +1,370 @@
-// ── My Bookings page ─────────────────────────────────────────────────
+// ── Messages/Chat System ────────────────────────────────────────────────
 
-const sessionTypeLabels = {
-  one_on_one: '👤 1-on-1',
-  group:      '👥 Group',
-  resources:  '📚 Resources'
-};
+let currentUser = null;
+let socket = null;
+let activeConversation = null;
+let conversations = [];
 
-fetch('/api/me')
-  .then(res => res.json())
-  .then(user => {
-    document.getElementById('navUserName').textContent = user.full_name;
-    const roleEl = document.getElementById('navUserRole');
-    if (roleEl) roleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-    if (user.role === 'tutor') {
-      const link = document.getElementById('tutorDashLink');
-      if (link) link.style.display = 'flex';
+// Initialize
+document.addEventListener('DOMContentLoaded', async function() {
+  await loadCurrentUser();
+  await loadConversations();
+  initializeSocket();
+});
+
+async function loadCurrentUser() {
+  try {
+    const response = await fetch('/api/me');
+    if (response.ok) {
+      currentUser = await response.json();
+      
+      // Update nav display
+      document.getElementById('navUserName').textContent = currentUser.full_name;
+      const roleEl = document.getElementById('navUserRole');
+      if (roleEl) roleEl.textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+      
+      // ✅ SHOW TUTOR DASHBOARD LINK IF USER IS TUTOR
+      if (currentUser.role === 'tutor') {
+        const tutorLink = document.getElementById('tutorDashLink');
+        if (tutorLink) tutorLink.style.display = 'flex';
+      }
+    } else {
+      window.location.href = '/';
     }
-  })
-  .catch(() => window.location.href = '/');
-
-fetch('/api/bookings')
-  .then(res => res.json())
-  .then(bookings => {
-    document.getElementById('loadingState').classList.add('hidden');
-
-    if (!bookings || bookings.length === 0) {
-      document.getElementById('emptyState').classList.remove('hidden');
-      return;
-    }
-
-    const list = document.getElementById('bookingsList');
-    list.classList.remove('hidden');
-
-    list.innerHTML = bookings.map(b => {
-      const date    = new Date(b.scheduled_at);
-      const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-
-      const statusLabel = {
-        pending:   '⏳ Pending',
-        confirmed: '✅ Confirmed',
-        cancelled: '❌ Cancelled',
-        completed: '🎓 Completed'
-      }[b.status] || b.status;
-
-      const sessionLabel = sessionTypeLabels[b.session_type] || '👤 1-on-1';
-      const canCancel    = b.status === 'pending';
-      const canReview    = b.status === 'completed';
-      const isResources  = b.session_type === 'resources';
-
-      return `
-        <div class="booking-card status-${b.status}" id="booking-${b.id}">
-          <div class="booking-info">
-            <div class="booking-tutor">👨‍🏫 ${b.tutor_name}</div>
-            <span class="booking-course">${b.course_code}</span>
-            <span class="session-type-badge">${sessionLabel}</span>
-            ${!isResources
-              ? `<div class="booking-date">📅 ${dateStr} at ${timeStr}</div>`
-              : `<div class="booking-date">📚 Tutor will share materials after confirming</div>`
-            }
-            ${b.message ? `<div class="booking-message">"${b.message}"</div>` : ''}
-            <div style="font-size:0.82rem;color:#aaa;margin-top:6px;">
-              $${parseFloat(b.hourly_rate).toFixed(2)}/hr
-              ${b.is_verified ? '· ✅ Verified Tutor' : ''}
-            </div>
-          </div>
-          <div class="booking-right">
-            <span class="status-badge ${b.status}">${statusLabel}</span>
-            ${canCancel ? `<button class="btn-cancel-booking" onclick="cancelBooking(${b.id})">Cancel</button>` : ''}
-            ${canReview ? `<button class="btn-submit-review" onclick="toggleReviewForm(${b.id})" id="reviewBtn-${b.id}">⭐ Leave Review</button>` : ''}
-          </div>
-        </div>
-        ${canReview ? `
-          <div id="reviewForm-${b.id}" class="review-form-card hidden">
-            <h4>⭐ Rate your session with ${b.tutor_name}</h4>
-            <div class="star-picker" id="stars-${b.id}">
-              <span data-val="1">★</span><span data-val="2">★</span>
-              <span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
-            </div>
-            <textarea id="comment-${b.id}" placeholder="Share your experience (optional)..."></textarea>
-            <br>
-            <button class="btn-submit-review" onclick="submitReview(${b.id})">Submit Review</button>
-            <span id="reviewFeedback-${b.id}" style="margin-left:10px;font-size:0.85rem;"></span>
-          </div>
-        ` : ''}
-      `;
-    }).join('');
-
-    document.querySelectorAll('.star-picker').forEach(picker => {
-      let selected = 0;
-      picker.querySelectorAll('span').forEach(star => {
-        star.addEventListener('mouseover', () => highlightStars(picker, parseInt(star.dataset.val)));
-        star.addEventListener('mouseout',  () => highlightStars(picker, selected));
-        star.addEventListener('click', () => {
-          selected = parseInt(star.dataset.val);
-          picker.dataset.rating = selected;
-          highlightStars(picker, selected);
-        });
-      });
-    });
-  })
-  .catch(err => {
-    console.error('Bookings error:', err);
-    document.getElementById('loadingState').textContent = 'Could not load bookings.';
-  });
-
-function highlightStars(picker, count) {
-  picker.querySelectorAll('span').forEach(s => {
-    s.classList.toggle('lit', parseInt(s.dataset.val) <= count);
-  });
+  } catch (error) {
+    console.error('Error loading user:', error);
+    window.location.href = '/';
+  }
 }
 
-function toggleReviewForm(id) {
-  document.getElementById(`reviewForm-${id}`).classList.toggle('hidden');
+async function loadConversations() {
+  try {
+    const response = await fetch('/api/conversations');
+    if (response.ok) {
+      conversations = await response.json();
+      console.log('🔍 Conversations loaded:', conversations); // Debug line
+      displayConversations();
+    } else {
+      console.error('Failed to load conversations');
+      showEmptyState();
+    }
+  } catch (error) {
+    console.error('Error loading conversations:', error);
+    showEmptyState();
+  }
 }
 
-async function submitReview(bookingId) {
-  const picker   = document.getElementById(`stars-${bookingId}`);
-  const rating   = parseInt(picker.dataset.rating || 0);
-  const comment  = document.getElementById(`comment-${bookingId}`).value;
-  const feedback = document.getElementById(`reviewFeedback-${bookingId}`);
-
-  if (!rating) {
-    feedback.textContent = '⚠️ Please select a star rating.';
-    feedback.style.color = '#e74c3c';
+function displayConversations() {
+  const container = document.getElementById('conversationsList');
+  
+  if (!conversations || conversations.length === 0) {
+    container.innerHTML = `
+      <div style="padding:20px;text-align:center;color:#999;font-size:0.9rem;">
+        <div style="font-size:2rem;margin-bottom:8px;">💬</div>
+        <p style="font-weight:600;margin-bottom:4px;">No conversations yet</p>
+        <p style="font-size:0.8rem;">Messages will appear here when you have confirmed sessions</p>
+      </div>
+    `;
     return;
   }
 
-  try {
-    const res  = await fetch('/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ booking_id: bookingId, rating, comment })
-    });
-    const data = await res.json();
+  const conversationsHTML = conversations.map(conv => {
+    // ✅ FIXED: Use other_name directly from API
+    const otherPerson = conv.other_name;
+    const lastMessage = conv.last_message ? 
+      (conv.last_message.length > 40 ? conv.last_message.substring(0, 40) + '...' : conv.last_message) : 
+      'No messages yet';
+    
+    const unreadClass = conv.unread_count > 0 ? 'unread' : '';
+    const activeClass = activeConversation === conv.booking_id ? 'active' : '';
 
-    if (!res.ok) {
-      feedback.textContent = data.error || 'Could not submit.';
-      feedback.style.color = '#e74c3c';
-    } else {
-      feedback.textContent = '✅ Review submitted!';
-      feedback.style.color = '#27ae60';
-      const btn = document.getElementById(`reviewBtn-${bookingId}`);
-      if (btn) btn.remove();
-      setTimeout(() => document.getElementById(`reviewForm-${bookingId}`).classList.add('hidden'), 2000);
+    return `
+      <div class="conversation-item ${unreadClass} ${activeClass}" onclick="openConversation(${conv.booking_id})">
+        <div class="conversation-avatar">${otherPerson.charAt(0).toUpperCase()}</div>
+        <div class="conversation-info">
+          <div class="conversation-name">${otherPerson}</div>
+          <div class="conversation-course">${conv.course_code}</div>
+          <div class="conversation-preview">${lastMessage}</div>
+          <div class="conversation-time">${timeAgo(new Date(conv.last_message_at || conv.created_at))}</div>
+        </div>
+        ${conv.unread_count > 0 ? `<div class="unread-badge">${conv.unread_count}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = conversationsHTML;
+}
+
+function showEmptyState() {
+  const container = document.getElementById('conversationsList');
+  container.innerHTML = `
+    <div style="padding:20px;text-align:center;color:#999;font-size:0.9rem;">
+      <div style="font-size:2rem;margin-bottom:8px;">😔</div>
+      <p style="font-weight:600;margin-bottom:4px;">Could not load messages</p>
+      <p style="font-size:0.8rem;">Please refresh the page to try again</p>
+    </div>
+  `;
+}
+
+async function openConversation(bookingId) {
+  if (activeConversation === bookingId) return;
+  
+  activeConversation = bookingId;
+  
+  // Update UI
+  document.querySelectorAll('.conversation-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  event.currentTarget.classList.add('active');
+
+  // Load messages for this conversation
+  try {
+    const response = await fetch(`/api/conversations/${bookingId}/messages`);
+    if (response.ok) {
+      const data = await response.json();
+      displayChatPanel(data.booking, data.messages);
+      
+      // Join socket room for real-time updates
+      if (socket) {
+        socket.emit('join_booking', bookingId);
+      }
+      
+      // Mark as read
+      markConversationAsRead(bookingId);
     }
-  } catch {
-    feedback.textContent = 'Network error.';
-    feedback.style.color = '#e74c3c';
+  } catch (error) {
+    console.error('Error loading conversation:', error);
   }
 }
 
-function cancelBooking(id) {
-  if (!confirm('Are you sure you want to cancel this booking?')) return;
-  fetch(`/api/bookings/${id}/cancel`, { method: 'PATCH' })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        const card = document.getElementById(`booking-${id}`);
-        card.classList.remove('status-pending');
-        card.classList.add('status-cancelled');
-        card.querySelector('.status-badge').className = 'status-badge cancelled';
-        card.querySelector('.status-badge').textContent = '❌ Cancelled';
-        const btn = card.querySelector('.btn-cancel-booking');
-        if (btn) btn.remove();
+function displayChatPanel(booking, messages) {
+  const chatPanel = document.getElementById('chatPanel');
+  
+  // ✅ FIXED: Get other person name from current conversations list
+  const currentConv = conversations.find(c => c.booking_id === activeConversation);
+  const otherPerson = currentConv ? currentConv.other_name : 'Unknown User';
+  
+  chatPanel.innerHTML = `
+    <div class="chat-header">
+      <div class="chat-avatar">${otherPerson.charAt(0).toUpperCase()}</div>
+      <div class="chat-info">
+        <div class="chat-name">${otherPerson}</div>
+        <div class="chat-course">${booking.course_code} • ${booking.status}</div>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      ${messages.map(msg => renderMessage(msg)).join('')}
+    </div>
+    <div class="chat-input-area">
+      <div class="chat-input-container">
+        <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+        <button id="sendButton" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  `;
+
+  // Scroll to bottom
+  const messagesContainer = document.getElementById('chatMessages');
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  // Auto-resize textarea
+  const textarea = document.getElementById('messageInput');
+  textarea.addEventListener('input', autoResizeTextarea);
+  textarea.addEventListener('keydown', handleKeyDown);
+}
+
+function renderMessage(msg) {
+  const isOwn = msg.sender_id === currentUser.id;
+  const time = new Date(msg.created_at).toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+
+  return `
+    <div class="message ${isOwn ? 'own' : 'other'}">
+      <div class="message-content">${escapeHtml(msg.content)}</div>
+      <div class="message-time">${time}</div>
+    </div>
+  `;
+}
+
+function autoResizeTextarea() {
+  const textarea = document.getElementById('messageInput');
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+}
+
+function handleKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+async function sendMessage() {
+  const textarea = document.getElementById('messageInput');
+  const content = textarea.value.trim();
+  
+  if (!content || !activeConversation) return;
+
+  try {
+    const response = await fetch('/api/conversations/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        booking_id: activeConversation,
+        content: content
+      })
+    });
+
+    if (response.ok) {
+      textarea.value = '';
+      autoResizeTextarea();
+      
+      // Add message to chat immediately
+      const messagesContainer = document.getElementById('chatMessages');
+      const newMessage = {
+        sender_id: currentUser.id,
+        content: content,
+        created_at: new Date().toISOString()
+      };
+      messagesContainer.innerHTML += renderMessage(newMessage);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      
+      // Update conversations list
+      loadConversations();
+    } else {
+      console.error('Failed to send message');
+      showFeedback('Failed to send message', 'error');
+    }
+  } catch (error) {
+    console.error('Error sending message:', error);
+    showFeedback('Network error', 'error');
+  }
+}
+
+async function markConversationAsRead(bookingId) {
+  try {
+    await fetch(`/api/conversations/${bookingId}/read`, {
+      method: 'POST'
+    });
+    
+    // Update UI
+    const convItem = document.querySelector(`[onclick="openConversation(${bookingId})"]`);
+    if (convItem) {
+      convItem.classList.remove('unread');
+      const badge = convItem.querySelector('.unread-badge');
+      if (badge) badge.remove();
+    }
+    
+    // Update conversations list
+    const conv = conversations.find(c => c.booking_id === bookingId);
+    if (conv) conv.unread_count = 0;
+    
+  } catch (error) {
+    console.error('Error marking as read:', error);
+  }
+}
+
+function initializeSocket() {
+  if (typeof io === 'undefined') {
+    console.error('Socket.io not loaded');
+    return;
+  }
+
+  socket = io();
+  
+  socket.on('connect', () => {
+    console.log('Connected to socket server');
+    if (currentUser) {
+      socket.emit('join_user', currentUser.id);
+    }
+  });
+
+  socket.on('new_message', (data) => {
+    // Add message to chat if it's the active conversation
+    if (data.booking_id === activeConversation) {
+      const messagesContainer = document.getElementById('chatMessages');
+      if (messagesContainer) {
+        messagesContainer.innerHTML += renderMessage(data.message);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
-    })
-    .catch(() => alert('Could not cancel. Please try again.'));
+    }
+    
+    // Update conversations list
+    loadConversations();
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Disconnected from socket server');
+  });
+}
+
+// Utility functions
+function timeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  if (seconds < 60) return 'just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return date.toLocaleDateString();
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function showFeedback(message, type = 'info') {
+  // Remove existing feedback
+  const existingFeedback = document.getElementById('feedback');
+  if (existingFeedback) existingFeedback.remove();
+  
+  // Create feedback element
+  const feedback = document.createElement('div');
+  feedback.id = 'feedback';
+  feedback.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+    max-width: 300px;
+  `;
+
+  // Set message and style
+  feedback.textContent = message;
+
+  if (type === 'success') {
+    feedback.style.background = '#F76900';
+    feedback.style.color = 'white';
+  } else if (type === 'error') {
+    feedback.style.background = '#000E54';
+    feedback.style.color = 'white';
+  } else {
+    feedback.style.background = '#F76900';
+    feedback.style.color = 'white';
+  }
+
+  document.body.appendChild(feedback);
+
+  // Auto-hide
+  setTimeout(() => {
+    if (feedback && feedback.parentNode) {
+      feedback.style.opacity = '0';
+      setTimeout(() => {
+        if (feedback && feedback.parentNode) {
+          feedback.parentNode.removeChild(feedback);
+        }
+      }, 300);
+    }
+  }, 3000);
 }
 
 // ── Notification badge ────────────────────────────────────────────────
@@ -182,9 +380,11 @@ function loadNotifBadge() {
       } else {
         badge.classList.add('hidden');
       }
+    })
+    .catch(() => {
+      // Silently fail for notification badge
     });
 }
 
 loadNotifBadge();
 setInterval(loadNotifBadge, 30000);
-socket.on('new_notification', () => loadNotifBadge());

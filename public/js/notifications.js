@@ -1,4 +1,4 @@
-// ── Notifications page with Booking Actions ──────────────────────────
+// ── Enhanced Notifications with Modern UI ────────────────────────────────
 
 const socket = io();
 let currentUser = null;
@@ -43,6 +43,13 @@ function loadNotifications() {
       const list = document.getElementById('notifList');
       list.classList.remove('hidden');
       list.innerHTML = notifs.map(n => buildNotifCard(n)).join('');
+
+      // Add staggered animation to cards
+      const cards = list.querySelectorAll('.notif-card');
+      cards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 100}ms`;
+        card.style.animation = 'slideInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) both';
+      });
     });
 }
 
@@ -67,11 +74,11 @@ function buildNotifCard(n) {
 
   const actionButtons = isBookingRequest && bookingId ? `
     <div class="notif-actions" onclick="event.stopPropagation()">
-      <button class="btn-accept-notif" onclick="acceptBookingFromNotif(${bookingId}, ${n.id})">
-        ✅ Accept
+      <button class="btn-accept-notif" onclick="acceptBookingFromNotif(${bookingId}, ${n.id})" id="accept-${n.id}">
+        <span>✅ Accept</span>
       </button>
-      <button class="btn-reject-notif" onclick="openRejectModal(${bookingId}, ${n.id})">
-        ❌ Decline
+      <button class="btn-reject-notif" onclick="openRejectModal(${bookingId}, ${n.id})" id="reject-${n.id}">
+        <span>❌ Decline</span>
       </button>
     </div>
   ` : '';
@@ -90,20 +97,20 @@ function buildNotifCard(n) {
   `;
 }
 
-// Extract booking ID from notification message
-function extractBookingId(message) {
-  // Try to extract booking ID from notification data
-  // This is a simple approach - in production you'd store booking_id in notifications table
-  const match = message.match(/booking[:\s]+(\d+)/i);
-  return match ? parseInt(match[1]) : null;
-}
-
-// Accept booking directly from notification
+// Accept booking with enhanced feedback
 async function acceptBookingFromNotif(bookingId, notifId) {
   if (!bookingId) {
     showNotifFeedback('Could not identify booking', 'error');
     return;
   }
+
+  const acceptBtn = document.getElementById(`accept-${notifId}`);
+  const rejectBtn = document.getElementById(`reject-${notifId}`);
+  
+  // Disable buttons and show loading
+  acceptBtn.disabled = true;
+  rejectBtn.disabled = true;
+  acceptBtn.innerHTML = '<span>⏳ Accepting...</span>';
 
   try {
     const response = await fetch(`/api/tutor-bookings/${bookingId}/confirm`, {
@@ -111,71 +118,139 @@ async function acceptBookingFromNotif(bookingId, notifId) {
     });
 
     if (response.ok) {
-      markRead(notifId);
-      document.getElementById(`notif-${notifId}`).style.opacity = '0.5';
-      showNotifFeedback('✅ Booking accepted!', 'success');
+      // Success animation
+      acceptBtn.innerHTML = '<span>✅ Accepted!</span>';
+      acceptBtn.style.background = 'linear-gradient(135deg, #00d4aa, #00b894)';
       
-      // Update the card to show it's been handled
+      markRead(notifId);
+      showNotifFeedback('🎉 Booking accepted successfully!', 'success');
+      
+      // Animate card update
       setTimeout(() => {
         const card = document.getElementById(`notif-${notifId}`);
         if (card) {
-          card.querySelector('.notif-actions').remove();
+          card.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+          card.style.transform = 'scale(0.95)';
+          card.style.opacity = '0.7';
+          
+          const actions = card.querySelector('.notif-actions');
+          if (actions) {
+            actions.style.transform = 'translateY(-10px)';
+            actions.style.opacity = '0';
+            setTimeout(() => actions.remove(), 300);
+          }
+          
+          card.classList.remove('unread');
           card.classList.add('read');
         }
       }, 1000);
+      
     } else {
       const error = await response.json();
+      acceptBtn.innerHTML = '<span>❌ Failed</span>';
       showNotifFeedback(error.error || 'Could not accept booking', 'error');
+      
+      // Re-enable buttons after error
+      setTimeout(() => {
+        acceptBtn.disabled = false;
+        rejectBtn.disabled = false;
+        acceptBtn.innerHTML = '<span>✅ Accept</span>';
+      }, 2000);
     }
   } catch (err) {
-    showNotifFeedback('Network error', 'error');
+    acceptBtn.innerHTML = '<span>❌ Error</span>';
+    showNotifFeedback('Network error occurred', 'error');
+    
+    // Re-enable buttons after error
+    setTimeout(() => {
+      acceptBtn.disabled = false;
+      rejectBtn.disabled = false;
+      acceptBtn.innerHTML = '<span>✅ Accept</span>';
+    }, 2000);
   }
 }
 
-// Open rejection modal
+// Open enhanced rejection modal
 function openRejectModal(bookingId, notifId) {
   if (!bookingId) {
     showNotifFeedback('Could not identify booking', 'error');
     return;
   }
 
-  // Create and show rejection modal
+  // Create modal with enhanced styling
   const modal = document.createElement('div');
   modal.className = 'reject-modal-overlay';
   modal.innerHTML = `
     <div class="reject-modal">
       <div class="reject-modal-header">
-        <h3>Decline Booking Request</h3>
+        <h3>💬 Send Decline Message</h3>
         <button class="close-reject-modal" onclick="closeRejectModal()">&times;</button>
       </div>
       <div class="reject-modal-body">
-        <label>Reason for declining:</label>
-        <textarea id="rejectReason" placeholder="Let the student know why you can't accept this session..." maxlength="500"></textarea>
+        <label>Explain why you can't accept this session:</label>
+        <textarea id="rejectReason" placeholder="I'm sorry, but I'm not available at that time. However, I could offer alternative times like..." maxlength="500"></textarea>
+        <div class="char-counter">
+          <span id="charCount">0</span>/500 characters
+        </div>
         <div class="reject-actions">
-          <button class="btn-cancel-reject" onclick="closeRejectModal()">Cancel</button>
-          <button class="btn-confirm-reject" onclick="confirmReject(${bookingId}, ${notifId})">Send Decline Message</button>
+          <button class="btn-cancel-reject" onclick="closeRejectModal()">
+            <span>Cancel</span>
+          </button>
+          <button class="btn-confirm-reject" onclick="confirmReject(${bookingId}, ${notifId})" id="confirmRejectBtn">
+            <span>💬 Send & Decline</span>
+          </button>
         </div>
       </div>
     </div>
   `;
 
   document.body.appendChild(modal);
-  document.getElementById('rejectReason').focus();
+  
+  // Focus textarea and setup character counter
+  const textarea = document.getElementById('rejectReason');
+  textarea.focus();
+  
+  textarea.addEventListener('input', function() {
+    const count = this.value.length;
+    document.getElementById('charCount').textContent = count;
+    
+    const confirmBtn = document.getElementById('confirmRejectBtn');
+    if (count === 0) {
+      confirmBtn.disabled = true;
+      confirmBtn.style.opacity = '0.5';
+    } else {
+      confirmBtn.disabled = false;
+      confirmBtn.style.opacity = '1';
+    }
+  });
+
+  // Close modal on escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeRejectModal();
+  });
 }
 
 function closeRejectModal() {
   const modal = document.querySelector('.reject-modal-overlay');
-  if (modal) modal.remove();
+  if (modal) {
+    modal.style.animation = 'fadeOut 0.3s ease-in-out';
+    setTimeout(() => modal.remove(), 300);
+  }
 }
 
-// Confirm rejection and send message
+// Confirm rejection with enhanced feedback
 async function confirmReject(bookingId, notifId) {
   const reason = document.getElementById('rejectReason').value.trim();
+  const confirmBtn = document.getElementById('confirmRejectBtn');
   
   if (!reason) {
     showNotifFeedback('Please provide a reason for declining', 'error');
     return;
   }
+
+  // Show loading state
+  confirmBtn.disabled = true;
+  confirmBtn.innerHTML = '<span>⏳ Sending...</span>';
 
   try {
     const response = await fetch(`/api/tutor-bookings/${bookingId}/decline`, {
@@ -185,25 +260,53 @@ async function confirmReject(bookingId, notifId) {
     });
 
     if (response.ok) {
-      closeRejectModal();
-      markRead(notifId);
-      document.getElementById(`notif-${notifId}`).style.opacity = '0.5';
-      showNotifFeedback('✅ Decline message sent', 'success');
+      confirmBtn.innerHTML = '<span>✅ Sent!</span>';
+      confirmBtn.style.background = 'linear-gradient(135deg, #00d4aa, #00b894)';
       
-      // Update the card to show it's been handled
       setTimeout(() => {
-        const card = document.getElementById(`notif-${notifId}`);
-        if (card) {
-          card.querySelector('.notif-actions').remove();
-          card.classList.add('read');
-        }
+        closeRejectModal();
+        markRead(notifId);
+        showNotifFeedback('✅ Decline message sent successfully', 'success');
+        
+        // Update card
+        setTimeout(() => {
+          const card = document.getElementById(`notif-${notifId}`);
+          if (card) {
+            card.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            card.style.transform = 'scale(0.95)';
+            card.style.opacity = '0.7';
+            
+            const actions = card.querySelector('.notif-actions');
+            if (actions) {
+              actions.style.transform = 'translateY(-10px)';
+              actions.style.opacity = '0';
+              setTimeout(() => actions.remove(), 300);
+            }
+            
+            card.classList.remove('unread');
+            card.classList.add('read');
+          }
+        }, 500);
       }, 1000);
+      
     } else {
       const error = await response.json();
+      confirmBtn.innerHTML = '<span>❌ Failed</span>';
       showNotifFeedback(error.error || 'Could not decline booking', 'error');
+      
+      setTimeout(() => {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<span>💬 Send & Decline</span>';
+      }, 2000);
     }
   } catch (err) {
-    showNotifFeedback('Network error', 'error');
+    confirmBtn.innerHTML = '<span>❌ Error</span>';
+    showNotifFeedback('Network error occurred', 'error');
+    
+    setTimeout(() => {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<span>💬 Send & Decline</span>';
+    }, 2000);
   }
 }
 
@@ -227,6 +330,7 @@ document.getElementById('readAllBtn').addEventListener('click', () => {
         card.classList.add('read');
       });
       document.getElementById('unreadCount').textContent = 'All caught up!';
+      showNotifFeedback('✅ All notifications marked as read', 'success');
     });
 });
 
@@ -238,7 +342,7 @@ function updateUnreadCount() {
     : 'All caught up!';
 }
 
-// Real-time new notification
+// Real-time new notification with animation
 socket.on('new_notification', (notif) => {
   const list = document.getElementById('notifList');
   if (!list) return;
@@ -252,11 +356,26 @@ socket.on('new_notification', (notif) => {
     title: notif.title,
     message: notif.message,
     is_read: 0,
+    booking_id: notif.booking_id,
     created_at: new Date().toISOString()
   };
 
-  list.insertAdjacentHTML('afterbegin', buildNotifCard(tempNotif));
+  const newCard = buildNotifCard(tempNotif);
+  list.insertAdjacentHTML('afterbegin', newCard);
+  
+  // Animate new notification
+  const addedCard = list.firstElementChild;
+  addedCard.style.transform = 'translateX(-100%)';
+  addedCard.style.opacity = '0';
+  
+  setTimeout(() => {
+    addedCard.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+    addedCard.style.transform = 'translateX(0)';
+    addedCard.style.opacity = '1';
+  }, 100);
+  
   updateUnreadCount();
+  showNotifFeedback('🔔 New notification received', 'info');
 });
 
 function timeAgo(date) {
@@ -268,49 +387,96 @@ function timeAgo(date) {
 }
 
 function showNotifFeedback(message, type = 'info') {
-  let feedback = document.getElementById('notifFeedback');
-  if (!feedback) {
-    feedback = document.createElement('div');
-    feedback.id = 'notifFeedback';
-    feedback.style.cssText = `
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-weight: 600;
-      z-index: 10000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      transition: all 0.3s ease;
-      max-width: 300px;
-    `;
-    document.body.appendChild(feedback);
-  }
+  // Remove existing feedback
+  const existingFeedback = document.getElementById('notifFeedback');
+  if (existingFeedback) existingFeedback.remove();
 
-  feedback.textContent = message;
+  const feedback = document.createElement('div');
+  feedback.id = 'notifFeedback';
+  feedback.innerHTML = `
+    <div class="feedback-content">
+      <span class="feedback-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : '💬'}</span>
+      <span class="feedback-message">${message}</span>
+    </div>
+  `;
   
-  if (type === 'success') {
-    feedback.style.background = '#00d4aa';
-    feedback.style.color = 'white';
-  } else if (type === 'error') {
-    feedback.style.background = '#e74c3c';
-    feedback.style.color = 'white';
-  } else {
-    feedback.style.background = '#F76900';
-    feedback.style.color = 'white';
-  }
+  feedback.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: ${type === 'success' ? 'linear-gradient(135deg, #00d4aa, #00b894)' : 
+                  type === 'error' ? 'linear-gradient(135deg, #e74c3c, #c0392b)' : 
+                  'linear-gradient(135deg, #F76900, #e05e00)'};
+    color: white;
+    padding: 16px 20px;
+    border-radius: 16px;
+    font-weight: 600;
+    z-index: 10000;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2);
+    transform: translateX(100%);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 350px;
+    backdrop-filter: blur(10px);
+  `;
 
-  feedback.style.display = 'block';
-  feedback.style.opacity = '1';
+  feedback.querySelector('.feedback-content').style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  `;
 
+  feedback.querySelector('.feedback-icon').style.cssText = `
+    font-size: 1.2rem;
+  `;
+
+  feedback.querySelector('.feedback-message').style.cssText = `
+    font-size: 0.9rem;
+  `;
+
+  document.body.appendChild(feedback);
+
+  // Slide in
   setTimeout(() => {
-    if (feedback) {
-      feedback.style.opacity = '0';
-      setTimeout(() => {
-        if (feedback && feedback.parentNode) {
-          feedback.parentNode.removeChild(feedback);
-        }
-      }, 300);
-    }
-  }, 3000);
+    feedback.style.transform = 'translateX(0)';
+  }, 100);
+
+  // Slide out
+  setTimeout(() => {
+    feedback.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+      if (feedback && feedback.parentNode) {
+        feedback.parentNode.removeChild(feedback);
+      }
+    }, 400);
+  }, 3500);
 }
+
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes fadeOut {
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+  
+  .char-counter {
+    text-align: right;
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 8px;
+  }
+`;
+document.head.appendChild(style);
