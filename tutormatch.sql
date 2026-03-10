@@ -106,7 +106,7 @@ CREATE TABLE `messages` (
 
 LOCK TABLES `messages` WRITE;
 /*!40000 ALTER TABLE `messages` DISABLE KEYS */;
-INSERT INTO `messages` VALUES (1,7,15,'? Decline Reason: I\'m sorry, but I\'m not available at that time. I could offer you another time that day, after 5 pm.','2026-03-10 17:55:13',NULL),(2,6,15,'⚠️ Session Cancellation: I have an emergency, can you reeschedule for another day?','2026-03-10 20:54:27',NULL),(3,8,16,'Thanks Ms. Gramm, i will see you there','2026-03-10 20:58:12','2026-03-10 20:58:28'),(4,8,15,'See you soon','2026-03-10 20:58:53','2026-03-10 20:59:28');
+INSERT INTO `messages` VALUES (1,7,15,'? Decline Reason: I\'m sorry, but I\'m not available at that time. I could offer you another time that day, after 5 pm.','2026-03-10 17:55:13','2026-03-10 22:19:21'),(2,6,15,'⚠️ Session Cancellation: I have an emergency, can you reeschedule for another day?','2026-03-10 20:54:27','2026-03-10 22:19:19'),(3,8,16,'Thanks Ms. Gramm, i will see you there','2026-03-10 20:58:12','2026-03-10 20:58:28'),(4,8,15,'See you soon','2026-03-10 20:58:53','2026-03-10 20:59:28');
 /*!40000 ALTER TABLE `messages` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -392,4 +392,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-10 17:41:07
+-- Dump completed on 2026-03-10 19:57:05
