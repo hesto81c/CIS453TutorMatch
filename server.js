@@ -18,14 +18,29 @@ const io         = new Server(httpServer);
 app.use(express.json());
 app.use(express.static('public'));
 app.use(session({
-  secret: process.env.SESSION_SECRET,
+  secret: process.env.SESSION_SECRET || 'fallback-secret-key-change-this',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 1000 * 60 * 60 * 24 }
+  cookie: { 
+    maxAge: 1000 * 60 * 60 * 24,
+    secure: false,
+    httpOnly: true
+  }
 }));
 
+// 🔧 FIXED: Proper requireLogin middleware
 function requireLogin(req, res, next) {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not logged in' });
+  console.log('🔐 Session check - userId:', req.session.userId);
+  
+  if (!req.session.userId) {
+    console.log('❌ No session, redirecting to login');
+    // For HTML pages, redirect - For API routes, return JSON
+    if (req.path.startsWith('/api/')) {
+      return res.status(401).json({ error: 'Not logged in' });
+    }
+    return res.redirect('/');
+  }
+  console.log('✅ Session valid, proceeding');
   next();
 }
 
@@ -41,14 +56,14 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// ── Helper: create notification ───────────────────────────────────────
-async function createNotification(userId, type, title, message) {
+// ── Helper: create notification with booking_id ──────────────────────────
+async function createNotification(userId, type, title, message, bookingId = null) {
   try {
     await db.query(
-      'INSERT INTO notifications (user_id, type, title, message) VALUES (?, ?, ?, ?)',
-      [userId, type, title, message]
+      'INSERT INTO notifications (user_id, type, title, message, booking_id) VALUES (?, ?, ?, ?, ?)',
+      [userId, type, title, message, bookingId]
     );
-    io.to(`user_${userId}`).emit('new_notification', { type, title, message });
+    io.to(`user_${userId}`).emit('new_notification', { type, title, message, booking_id: bookingId });
   } catch (err) {
     console.error('Notification error:', err);
   }
@@ -59,9 +74,18 @@ app.get('/',                (req, res) => res.sendFile(path.join(__dirname, 'vie
 app.get('/register',        (req, res) => res.sendFile(path.join(__dirname, 'views', 'register.html')));
 app.get('/forgot-password', (req, res) => res.sendFile(path.join(__dirname, 'views', 'forgot-password.html')));
 app.get('/reset-password',  (req, res) => res.sendFile(path.join(__dirname, 'views', 'reset-password.html')));
-app.get('/dashboard',       requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'dashboard.html')));
-app.get('/bookings',        requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'bookings.html')));
-app.get('/profile',         requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'profile.html')));
+app.get('/dashboard',       requireLogin, (req, res) => {
+  console.log('📊 Dashboard accessed by user:', req.session.userId);
+  res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
+});
+app.get('/bookings',        requireLogin, (req, res) => {
+  console.log('📅 Bookings accessed by user:', req.session.userId);
+  res.sendFile(path.join(__dirname, 'views', 'bookings.html'));
+});
+app.get('/profile',         requireLogin, (req, res) => {
+  console.log('👤 Profile accessed by user:', req.session.userId);
+  res.sendFile(path.join(__dirname, 'views', 'profile.html'));
+});
 app.get('/messages',        requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'messages.html')));
 app.get('/messages/:id',    requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'messages.html')));
 app.get('/notifications',   requireLogin, (req, res) => res.sendFile(path.join(__dirname, 'views', 'notifications.html')));
@@ -87,6 +111,7 @@ app.post('/api/register', async (req, res) => {
     }
     req.session.userId = result.insertId;
     req.session.role   = role;
+    console.log('✅ User registered and session created:', result.insertId);
     res.json({ success: true, role });
   } catch (err) {
     console.error('Register error:', err);
@@ -105,13 +130,20 @@ app.post('/api/login', async (req, res) => {
     if (!match) return res.status(401).json({ error: 'Invalid email or password.' });
     req.session.userId = user.id;
     req.session.role   = user.role;
+    console.log('✅ User logged in and session created:', user.id);
+    console.log('✅ Session after login:', JSON.stringify(req.session, null, 2));
     res.json({ success: true, role: user.role });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(500).json({ error: 'Server error.' });
   }
 });
 
-app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/'); });
+app.get('/logout', (req, res) => { 
+  console.log('👋 User logging out:', req.session.userId);
+  req.session.destroy(); 
+  res.redirect('/'); 
+});
 
 app.get('/api/me', requireLogin, async (req, res) => {
   try {
@@ -129,12 +161,10 @@ app.post('/api/forgot-password', async (req, res) => {
   if (!email) return res.status(400).json({ error: 'Email is required.' });
   try {
     const [users] = await db.query('SELECT id, full_name FROM users WHERE email = ?', [email]);
-    // Always return success to prevent email enumeration
     if (users.length === 0) return res.json({ success: true });
     const user    = users[0];
     const token   = crypto.randomBytes(32).toString('hex');
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    // Invalidate any existing unused tokens for this user
+    const expires = new Date(Date.now() + 60 * 60 * 1000); 
     await db.query(
       'UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0',
       [user.id]
@@ -276,14 +306,16 @@ app.post('/api/bookings', requireLogin, async (req, res) => {
   if (!tutor_id || !course_code || !scheduled_at)
     return res.status(400).json({ error: 'Missing required fields.' });
   try {
-    await db.query(
+    const [result] = await db.query(
       'INSERT INTO bookings (student_id, tutor_id, course_code, scheduled_at, message, session_type) VALUES (?, ?, ?, ?, ?, ?)',
       [req.session.userId, tutor_id, course_code, scheduled_at, message || '', session_type || 'one_on_one']
     );
+    const bookingId = result.insertId;
     const [student] = await db.query('SELECT full_name FROM users WHERE id = ?', [req.session.userId]);
     await createNotification(
       tutor_id, 'booking_request', '📅 New Booking Request',
-      `${student[0].full_name} wants to book a session for ${course_code}`
+      `${student[0].full_name} wants to book a session for ${course_code}`,
+      bookingId
     );
     res.json({ success: true });
   } catch (err) {
@@ -322,6 +354,7 @@ app.patch('/api/bookings/:id/cancel', requireLogin, async (req, res) => {
 
 // ── Profile ───────────────────────────────────────────────────────────
 app.get('/api/profile', requireLogin, async (req, res) => {
+  console.log('📋 Profile API accessed by user:', req.session.userId);
   try {
     const [rows] = await db.query(
       'SELECT id, full_name, email, role, university FROM users WHERE id = ?',
@@ -342,6 +375,7 @@ app.get('/api/profile', requireLogin, async (req, res) => {
     }
     res.json(user);
   } catch (err) {
+    console.error('Profile API error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -388,6 +422,51 @@ app.delete('/api/profile/courses/:id', requireLogin, async (req, res) => {
   }
 });
 
+// ── Course Catalog API ───────────────────────────────────────────────
+app.get('/api/courses', requireLogin, async (req, res) => {
+  console.log('📚 Courses API accessed by user:', req.session.userId);
+  try {
+    const [courses] = await db.query(
+      'SELECT course_code, course_name, department FROM course_catalog ORDER BY course_code'
+    );
+    console.log(`📚 Found ${courses.length} courses`);
+    res.json(courses);
+  } catch (err) {
+    console.error('Courses API error:', err);
+    res.status(500).json({ error: 'Could not load courses' });
+  }
+});
+
+app.get('/api/professors', requireLogin, async (req, res) => {
+  console.log('👨‍🏫 Professors API accessed by user:', req.session.userId);
+  try {
+    const [professors] = await db.query(
+      'SELECT name, department FROM professors ORDER BY name'
+    );
+    console.log(`👨‍🏫 Found ${professors.length} professors`);
+    res.json(professors);
+  } catch (err) {
+    console.error('Professors API error:', err);
+    res.status(500).json({ error: 'Could not load professors' });
+  }
+});
+
+app.get('/api/course/:code', requireLogin, async (req, res) => {
+  try {
+    const [course] = await db.query(
+      'SELECT course_name FROM course_catalog WHERE course_code = ?',
+      [req.params.code]
+    );
+    if (course.length > 0) {
+      res.json({ course_name: course[0].course_name });
+    } else {
+      res.json({ course_name: '' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Could not load course info' });
+  }
+});
+
 // ── Tutor dashboard ───────────────────────────────────────────────────
 app.get('/api/tutor-bookings', requireLogin, async (req, res) => {
   try {
@@ -429,21 +508,41 @@ app.patch('/api/tutor-bookings/:id/confirm', requireLogin, async (req, res) => {
 
 app.patch('/api/tutor-bookings/:id/decline', requireLogin, async (req, res) => {
   try {
+    const { reason } = req.body;
+    
     const [result] = await db.query(
       "UPDATE bookings SET status = 'cancelled' WHERE id = ? AND tutor_id = ? AND status = 'pending'",
       [req.params.id, req.session.userId]
     );
     if (result.affectedRows === 0) return res.status(400).json({ error: 'Booking not found.' });
+    
     const [booking] = await db.query(
-      'SELECT b.student_id, b.course_code, u.full_name AS tutor_name FROM bookings b JOIN users u ON u.id = b.tutor_id WHERE b.id = ?',
+      'SELECT b.*, u.full_name AS tutor_name FROM bookings b JOIN users u ON u.id = b.tutor_id WHERE b.id = ?',
       [req.params.id]
     );
+    
     if (booking.length > 0) {
-      await createNotification(booking[0].student_id, 'booking_declined', '❌ Booking Declined',
-        `${booking[0].tutor_name} could not accept your session for ${booking[0].course_code}`);
+      const bookingData = booking[0];
+      
+      // Send notification
+      await createNotification(bookingData.student_id, 'booking_declined', '❌ Booking Declined',
+        `${bookingData.tutor_name} declined your session for ${bookingData.course_code}`);
+      
+      // If reason provided, send it as a message
+      if (reason && reason.trim()) {
+        await db.query(
+          'INSERT INTO messages (booking_id, sender_id, content) VALUES (?, ?, ?)',
+          [req.params.id, req.session.userId, `📝 Decline Reason: ${reason.trim()}`]
+        );
+        
+        // Notify student of new message
+        await createNotification(bookingData.student_id, 'new_message', '💬 Message from Tutor',
+          `${bookingData.tutor_name} sent you a message about your ${bookingData.course_code} session`);
+      }
     }
     res.json({ success: true });
   } catch (err) {
+    console.error('Decline booking error:', err);
     res.status(500).json({ error: 'Could not decline booking.' });
   }
 });
@@ -703,6 +802,189 @@ async function createCalendarEvent(userId, bookingId, tokens) {
   });
 }
 
+// ───────────────────────────────────────────────────────────────────────
+// ── STAGE 9: STRIPE PAYMENT MOCK ──────────────────────────────────────
+// ───────────────────────────────────────────────────────────────────────
+
+// Mock Stripe payment processing
+app.post('/api/payments/process', requireLogin, async (req, res) => {
+  const { booking_id, payment_method, amount } = req.body;
+  
+  if (!booking_id || !payment_method || !amount) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    // Check booking exists and is confirmed
+    const [bookings] = await db.query(`
+      SELECT b.*, s.full_name AS student_name, s.email AS student_email,
+             t.full_name AS tutor_name, t.email AS tutor_email, tp.hourly_rate
+      FROM bookings b
+      JOIN users s ON s.id = b.student_id  
+      JOIN users t ON t.id = b.tutor_id
+      JOIN tutor_profiles tp ON tp.user_id = b.tutor_id
+      WHERE b.id = ? AND b.student_id = ? AND b.status = 'confirmed'
+    `, [booking_id, req.session.userId]);
+
+    if (bookings.length === 0) {
+      return res.status(400).json({ error: 'Booking not found or not confirmed' });
+    }
+
+    const booking = bookings[0];
+    
+    // Mock Stripe processing delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Simulate 5% failure rate for realistic testing
+    const shouldFail = Math.random() < 0.05;
+    
+    if (shouldFail) {
+      return res.status(400).json({ 
+        error: 'Payment failed', 
+        code: 'card_declined',
+        message: 'Your card was declined. Please try a different payment method.'
+      });
+    }
+
+    // Generate payment record
+    const paymentId = `pay_mock_${crypto.randomBytes(12).toString('hex')}`;
+    
+    await db.query(`
+      INSERT INTO payments (booking_id, student_id, tutor_id, amount, stripe_payment_id, status, payment_method_last4)
+      VALUES (?, ?, ?, ?, ?, 'paid', ?)
+    `, [booking_id, req.session.userId, booking.tutor_id, amount, paymentId, payment_method.last4]);
+
+    // Update booking to paid status
+    await db.query(
+      "UPDATE bookings SET payment_status = 'paid' WHERE id = ?", 
+      [booking_id]
+    );
+
+    // Send email receipt
+    await sendPaymentReceipt(booking, amount, paymentId);
+
+    // Notify tutor of payment
+    await createNotification(
+      booking.tutor_id,
+      'payment_received',
+      '💰 Payment Received',
+      `${booking.student_name} paid $${amount} for ${booking.course_code} session`
+    );
+
+    res.json({ 
+      success: true, 
+      payment_id: paymentId,
+      amount: amount
+    });
+
+  } catch (err) {
+    console.error('Payment processing error:', err);
+    res.status(500).json({ error: 'Payment processing failed' });
+  }
+});
+
+// Get payment history
+app.get('/api/payments', requireLogin, async (req, res) => {
+  try {
+    const [payments] = await db.query(`
+      SELECT p.*, b.course_code, b.scheduled_at,
+             CASE 
+               WHEN p.student_id = ? THEN t.full_name
+               ELSE s.full_name 
+             END AS other_party_name
+      FROM payments p
+      JOIN bookings b ON b.id = p.booking_id
+      JOIN users s ON s.id = p.student_id
+      JOIN users t ON t.id = p.tutor_id
+      WHERE p.student_id = ? OR p.tutor_id = ?
+      ORDER BY p.created_at DESC
+    `, [req.session.userId, req.session.userId, req.session.userId]);
+    
+    res.json(payments);
+  } catch (err) {
+    res.status(500).json({ error: 'Could not load payments' });
+  }
+});
+
+async function sendPaymentReceipt(booking, amount, paymentId) {
+  try {
+    await transporter.sendMail({
+      from: `"TutorMatch" <${process.env.MAIL_USER}>`,
+      to: booking.student_email,
+      subject: `Payment Receipt - ${booking.course_code} Session`,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;background:#0f1428;color:#e8eaf6;border-radius:16px;padding:32px;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <h2 style="color:#F76900;margin:0;">TutorMatch</h2>
+            <p style="color:#6b7499;font-size:0.85rem;margin:4px 0 0;">Payment Receipt</p>
+          </div>
+          
+          <div style="background:rgba(247,105,0,0.1);border:1px solid rgba(247,105,0,0.3);border-radius:12px;padding:20px;margin-bottom:24px;">
+            <h3 style="color:#F76900;margin:0 0 12px;">✅ Payment Successful</h3>
+            <p style="color:#aaa;margin:0;">Your payment has been processed successfully.</p>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:20px;margin-bottom:20px;">
+            <h4 style="color:#fff;margin:0 0 16px;">Session Details</h4>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <span style="color:#aaa;">Course:</span>
+              <span style="color:#F76900;font-weight:600;">${booking.course_code}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <span style="color:#aaa;">Tutor:</span>
+              <span style="color:#fff;">${booking.tutor_name}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+              <span style="color:#aaa;">Date:</span>
+              <span style="color:#fff;">${new Date(booking.scheduled_at).toLocaleDateString()}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:#aaa;">Time:</span>
+              <span style="color:#fff;">${new Date(booking.scheduled_at).toLocaleTimeString()}</span>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:20px;margin-bottom:24px;">
+            <h4 style="color:#fff;margin:0 0 16px;">Payment Summary</h4>
+            <div style="display:flex;justify-content:space-between;margin-bottom:12px;">
+              <span style="color:#aaa;">Session fee:</span>
+              <span style="color:#fff;">$${amount}</span>
+            </div>
+            <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;display:flex;justify-content:space-between;">
+              <span style="color:#fff;font-weight:600;">Total paid:</span>
+              <span style="color:#F76900;font-weight:700;font-size:1.1rem;">$${amount}</span>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:16px;margin-bottom:24px;">
+            <p style="color:#6b7499;font-size:0.8rem;margin:0;">
+              <strong style="color:#aaa;">Payment ID:</strong> ${paymentId}<br>
+              <strong style="color:#aaa;">Date:</strong> ${new Date().toLocaleDateString()}
+            </p>
+          </div>
+
+          <div style="text-align:center;">
+            <p style="color:#6b7499;font-size:0.85rem;margin-bottom:16px;">
+              Your session is now fully confirmed. Check your calendar or chat with your tutor!
+            </p>
+            <a href="http://localhost:3000/bookings" 
+               style="background:#F76900;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:0.9rem;display:inline-block;">
+              View My Bookings
+            </a>
+          </div>
+
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:24px 0;">
+          <p style="color:#6b7499;font-size:0.75rem;text-align:center;">
+            TutorMatch · Syracuse University · #OrangeNation
+          </p>
+        </div>
+      `
+    });
+  } catch (err) {
+    console.error('Receipt email error:', err);
+  }
+}
+
 // ── Socket.io ─────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
   console.log('🔌 Socket connected:', socket.id);
@@ -741,4 +1023,7 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 TutorMatch running on http://localhost:${PORT}`);
+  console.log(`📊 Session secret configured: ${process.env.SESSION_SECRET ? 'YES' : 'NO (using fallback)'}`);
+  console.log(`📧 Email configured: ${process.env.MAIL_USER ? 'YES' : 'NO'}`);
+  console.log(`🗄️ Database connection: Check startup logs above`);
 });

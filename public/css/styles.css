@@ -339,9 +339,148 @@ body {
   color: var(--navy);
 }
 
-/* ── Responsive ── */
-@media (max-width: 700px) {
-  .left-panel { display: none; }
-  .page-wrapper { margin: 10px; }
-  .right-panel { padding: 40px 20px; }
+/* ───────────────────────────────────────────────────────────────────── */
+/* ── MOBILE RESPONSIVE ─────────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  body {
+    align-items: flex-start;
+    background: var(--navy);
+  }
+
+  /* ── Collapse to single panel on mobile ── */
+  .page-wrapper {
+    flex-direction: column;
+    margin: 0;
+    border-radius: 0;
+    min-height: 100vh;
+    max-width: none;
+    box-shadow: none;
+    border: none;
+  }
+
+  .page-wrapper::before { display: none; }
+
+  /* ── Keep left panel as header on mobile ── */
+  .left-panel {
+    flex: none;
+    padding: 24px 20px 32px;
+    gap: 24px;
+    border-right: none;
+    border-bottom: 3px solid #F76900;
+  }
+
+  .brand {
+    text-align: center;
+    gap: 12px;
+  }
+
+  .logo-circle {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto;
+  }
+
+  .brand h1 {
+    font-size: 1.8rem;
+  }
+
+  .brand p {
+    font-size: 0.88rem;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .features {
+    gap: 10px;
+  }
+
+  .feature-item {
+    font-size: 0.82rem;
+    padding: 6px 10px;
+  }
+
+  .feature-item .icon {
+    font-size: 1rem;
+    width: 24px;
+  }
+
+  /* ── Right panel takes full width ── */
+  .right-panel {
+    padding: 32px 20px 40px;
+    background: #f5f7fa;
+  }
+
+  .form-card {
+    max-width: none;
+    background: white;
+    padding: 32px 24px;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0,14,84,0.15);
+    gap: 16px;
+  }
+
+  .form-header h2 {
+    font-size: 1.6rem;
+    text-align: center;
+  }
+
+  .form-header p {
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  /* ── Form adjustments ── */
+  .form-options {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .role-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .role-btn {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .left-panel {
+    padding: 20px 16px 28px;
+  }
+
+  .brand h1 {
+    font-size: 1.6rem;
+  }
+
+  .brand p {
+    font-size: 0.85rem;
+  }
+
+  .right-panel {
+    padding: 24px 16px 32px;
+  }
+
+  .form-card {
+    padding: 28px 20px;
+  }
+
+  .form-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .input-group input {
+    padding: 14px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .btn-primary {
+    padding: 16px;
+    font-size: 1.05rem;
+  }
 }

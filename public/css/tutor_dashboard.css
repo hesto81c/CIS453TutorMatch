@@ -1,0 +1,351 @@
+/* ── Enhanced Dashboard Action Buttons ───────────────────────────────── */
+.booking-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-accept-dash,
+.btn-reject-dash,
+.btn-complete-dash {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  flex: 1;
+  min-width: 100px;
+}
+
+.btn-accept-dash {
+  background: linear-gradient(135deg, #00d4aa, #00b894);
+  color: white;
+  box-shadow: 0 3px 10px rgba(0, 212, 170, 0.3);
+}
+
+.btn-accept-dash:hover {
+  background: linear-gradient(135deg, #00b894, #00a085);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 212, 170, 0.4);
+}
+
+.btn-reject-dash {
+  background: white;
+  color: #e74c3c;
+  border: 2px solid #e74c3c;
+}
+
+.btn-reject-dash:hover {
+  background: #e74c3c;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.btn-complete-dash {
+  background: linear-gradient(135deg, #F76900, #e05e00);
+  color: white;
+  box-shadow: 0 3px 10px rgba(247, 105, 0, 0.3);
+}
+
+.btn-complete-dash:hover {
+  background: linear-gradient(135deg, #e05e00, #d14e00);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(247, 105, 0, 0.4);
+}
+
+/* ── Booking Card Enhancements ───────────────────────────────────────── */
+.pending-request {
+  border-left: 4px solid #F76900;
+  background: linear-gradient(135deg, #fff9f5, #fff3eb);
+}
+
+.booking-card.confirmed {
+  border-left: 4px solid #00d4aa;
+  background: linear-gradient(135deg, #f0fdf9, #eafaf1);
+}
+
+.booking-card.completed {
+  opacity: 0.8;
+  border-left: 4px solid #6b7280;
+}
+
+.booking-card.cancelled {
+  opacity: 0.6;
+  border-left: 4px solid #e74c3c;
+}
+
+.booking-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-badge.completed {
+  background: #eafaf1;
+  color: #00b894;
+}
+
+.status-badge.cancelled {
+  background: #fdecea;
+  color: #e74c3c;
+}
+
+/* ── Dashboard Stats Cards ────────────────────────────────────────────── */
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0,14,84,0.06);
+  border-left: 4px solid #F76900;
+  transition: transform 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #000E54;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 600;
+}
+
+/* ── Dashboard Reject Modal ───────────────────────────────────────────── */
+.dash-reject-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 14, 84, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.dash-reject-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 20px 40px rgba(0, 14, 84, 0.25);
+  border: 1px solid rgba(247, 105, 0, 0.2);
+}
+
+.dash-reject-modal-header {
+  background: linear-gradient(135deg, #000E54, #001580);
+  padding: 18px 24px;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #F76900;
+}
+
+.dash-reject-modal-header h3 {
+  color: white;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.close-dash-reject-modal {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.close-dash-reject-modal:hover {
+  background: rgba(247, 105, 0, 0.5);
+}
+
+.dash-reject-modal-body {
+  padding: 24px;
+}
+
+.dash-reject-modal-body label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #000E54;
+  margin-bottom: 10px;
+}
+
+#dashRejectReason {
+  width: 100%;
+  min-height: 120px;
+  padding: 14px;
+  border: 2px solid #e0e4ef;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+#dashRejectReason:focus {
+  border-color: #F76900;
+}
+
+.dash-reject-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn-cancel-dash-reject,
+.btn-send-dash-reject {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-cancel-dash-reject {
+  background: #f8f9fa;
+  color: #666;
+  border: 2px solid #e0e4ef;
+}
+
+.btn-cancel-dash-reject:hover {
+  background: #e8eaf0;
+  color: #000E54;
+}
+
+.btn-send-dash-reject {
+  background: linear-gradient(135deg, #F76900, #e05e00);
+  color: white;
+  box-shadow: 0 4px 14px rgba(247, 105, 0, 0.3);
+}
+
+.btn-send-dash-reject:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(247, 105, 0, 0.4);
+}
+
+/* ── Mobile Responsive Adjustments ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .booking-actions {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .btn-accept-dash,
+  .btn-reject-dash,
+  .btn-complete-dash {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    min-width: auto;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-number {
+    font-size: 1.6rem;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+  }
+
+  .dash-reject-modal {
+    margin: 10px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .dash-reject-modal-header {
+    padding: 14px 18px;
+  }
+
+  .dash-reject-modal-header h3 {
+    font-size: 1rem;
+  }
+
+  .dash-reject-modal-body {
+    padding: 18px;
+  }
+
+  #dashRejectReason {
+    min-height: 100px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .dash-reject-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dash-reject-modal {
+    margin: 5px;
+    max-width: calc(100vw - 10px);
+    border-radius: 12px;
+  }
+
+  .dash-reject-modal-header {
+    border-radius: 12px 12px 0 0;
+    padding: 12px 16px;
+  }
+
+  .dash-reject-modal-header h3 {
+    font-size: 0.95rem;
+  }
+
+  .dash-reject-modal-body {
+    padding: 16px;
+  }
+
+  .close-dash-reject-modal {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  #statsRow {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 14px;
+  }
+
+  .stat-number {
+    font-size: 1.4rem;
+  }
+}

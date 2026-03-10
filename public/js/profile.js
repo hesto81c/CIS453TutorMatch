@@ -1,242 +1,295 @@
-// ── My Profile page ──────────────────────────────────────────────────
+let userProfile = null;
+let courseCatalog = [];
+let professors = [];
+let userCourses = [];
 
-fetch('/api/profile')
-  .then(res => res.json())
-  .then(user => {
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('navUserName').textContent = user.full_name;
-    const roleEl = document.getElementById('navUserRole');
-    if (roleEl) roleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-    if (user.role === 'tutor') {
-      const link = document.getElementById('tutorDashLink');
-      if (link) link.style.display = 'flex';
-    }
-    const page = document.getElementById('profilePage');
-    page.classList.remove('hidden');
-    if (user.role === 'tutor') {
-      page.innerHTML = buildTutorProfile(user);
-      initTutorEvents();
-    } else {
-      page.innerHTML = buildStudentProfile(user);
-    }
-  })
-  .catch(() => window.location.href = '/');
+document.addEventListener('DOMContentLoaded', async function() {
+  await loadUserProfile();
+  await loadCourseCatalog();
+  await loadProfessors();
+  displayProfile();
+});
 
-function buildTutorProfile(user) {
-  return `
-    <div class="profile-header-card">
-      <div class="profile-big-avatar">${user.full_name.charAt(0)}</div>
-      <div class="profile-header-info">
-        <h1>${user.full_name}</h1>
-        <p>${user.email}</p>
-        <span class="profile-role-badge">📚 Tutor</span>
-        ${user.is_verified ? '<span class="verified-tag">✅ Verified</span>' : ''}
-      </div>
-    </div>
-    <div class="profile-section">
-      <h2>✏️ Edit Profile</h2>
-      <div class="profile-form">
-        <div class="input-group">
-          <label>Bio</label>
-          <textarea id="bioInput" placeholder="Tell students about your experience...">${user.bio || ''}</textarea>
-        </div>
-        <div class="input-group">
-          <label>Hourly Rate ($)</label>
-          <input type="number" id="rateInput" value="${parseFloat(user.hourly_rate || 0).toFixed(2)}" min="1" max="500" step="0.50" />
-        </div>
-        <div>
-          <button class="btn-save" id="saveProfileBtn">💾 Save Changes</button>
-          <span id="saveFeedback" class="save-feedback hidden"></span>
-        </div>
-      </div>
-    </div>
-    <div class="profile-section">
-      <h2>📚 My Courses</h2>
-      <div id="coursesList" class="courses-manager">
-        ${buildCourseRows(user.courses || [])}
-      </div>
-      <div class="add-course-form">
-        <h3>➕ Add a Course</h3>
-        <div class="course-form-grid">
-          <input type="text" id="newCode" placeholder="e.g. CSE 274" maxlength="20" />
-          <input type="text" id="newName" placeholder="e.g. Data Structures" />
-        </div>
-        <div class="course-form-grid-2">
-          <input type="text" id="newProf" placeholder="Professor (optional)" />
-          <input type="text" id="newGrade" placeholder="Grade e.g. A, B+" maxlength="5" />
-        </div>
-        <button class="btn-add-course" id="addCourseBtn">Add Course</button>
-        <span id="courseFeedback" class="save-feedback hidden" style="margin-left:10px;"></span>
-      </div>
-    </div>
-  `;
+async function loadUserProfile() {
+  try {
+    const response = await fetch('/api/profile');
+    if (response.ok) {
+      userProfile = await response.json();
+      userCourses = userProfile.courses || [];
+    }
+  } catch (error) {
+    console.error('Error loading profile:', error);
+  }
 }
 
-function buildCourseRows(courses) {
-  if (!courses || courses.length === 0) {
-    return '<p style="color:#aaa;font-size:0.9rem;padding:8px 0;">No courses added yet.</p>';
+async function loadCourseCatalog() {
+  try {
+    const response = await fetch('/api/courses');
+    if (response.ok) {
+      courseCatalog = await response.json();
+    }
+  } catch (error) {
+    console.error('Error loading courses:', error);
   }
-  return courses.map(c => `
-    <div class="course-manage-row" id="course-row-${c.id}">
-      <span class="course-manage-code">${c.course_code}</span>
-      <span class="course-manage-name">${c.course_name}</span>
-      <span class="course-manage-meta">${c.professor ? '👨‍🏫 ' + c.professor : ''} ${c.grade ? '· ' + c.grade : ''}</span>
-      <button class="btn-delete-course" onclick="deleteCourse(${c.id})">Remove</button>
+}
+
+async function loadProfessors() {
+  try {
+    const response = await fetch('/api/professors');
+    if (response.ok) {
+      professors = await response.json();
+    }
+  } catch (error) {
+    console.error('Error loading professors:', error);
+  }
+}
+
+function displayProfile() {
+  if (!userProfile) return;
+
+  // Profile header
+  document.getElementById('profileName').textContent = userProfile.full_name;
+  document.getElementById('profileEmail').textContent = userProfile.email;
+  document.getElementById('profileRole').textContent = userProfile.role;
+  document.getElementById('profileUniversity').textContent = userProfile.university || 'Syracuse University';
+
+  if (userProfile.role === 'tutor') {
+    document.getElementById('tutorSections').style.display = 'block';
+    
+    // Fill tutor profile form
+    document.getElementById('bioTextarea').value = userProfile.bio || '';
+    document.getElementById('hourlyRateInput').value = userProfile.hourly_rate || '';
+
+    // Display existing courses
+    displayUserCourses();
+    
+    // Setup add course form with dropdowns
+    setupAddCourseForm();
+  }
+}
+
+function displayUserCourses() {
+  const container = document.getElementById('userCourses');
+  
+  if (userCourses.length === 0) {
+    container.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">No courses added yet</p>';
+    return;
+  }
+
+  const coursesHTML = userCourses.map(course => `
+    <div class="course-manage-row">
+      <div class="course-manage-code">${course.course_code}</div>
+      <div class="course-manage-name">${course.course_name}</div>
+      <div class="course-manage-meta">
+        ${course.professor ? `Prof. ${course.professor}` : ''}
+        ${course.professor && course.grade ? ' • ' : ''}
+        ${course.grade ? `Grade: ${course.grade}` : ''}
+      </div>
+      <button class="btn-delete-course" onclick="deleteCourse(${course.id})">Delete</button>
     </div>
   `).join('');
+  
+  container.innerHTML = coursesHTML;
 }
 
-function buildStudentProfile(user) {
-  return `
-    <div class="profile-header-card">
-      <div class="profile-big-avatar">${user.full_name.charAt(0)}</div>
-      <div class="profile-header-info">
-        <h1>${user.full_name}</h1>
-        <p>${user.email}</p>
-        <span class="profile-role-badge">🎓 Student</span>
-      </div>
-    </div>
-    <div class="profile-section">
-      <h2>📋 My Information</h2>
-      <div class="info-grid">
-        <div class="info-item"><label>Full Name</label><p>${user.full_name}</p></div>
-        <div class="info-item"><label>Email</label><p>${user.email}</p></div>
-        <div class="info-item"><label>Role</label><p>🎓 Student</p></div>
-        <div class="info-item"><label>University</label><p>${user.university || 'Syracuse University'}</p></div>
-      </div>
-    </div>
-    <div class="profile-section">
-      <h2>📅 Quick Links</h2>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <a href="/dashboard" style="padding:10px 20px;background:linear-gradient(135deg,#F76900,#e05e00);color:white;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9rem;">🔍 Find a Tutor</a>
-        <a href="/bookings"  style="padding:10px 20px;background:#000E54;color:white;border-radius:10px;text-decoration:none;font-weight:700;font-size:0.9rem;">📅 My Bookings</a>
-      </div>
-    </div>
+function setupAddCourseForm() {
+  // Course Code Dropdown
+  const courseCodeSelect = document.getElementById('courseCodeSelect');
+  courseCodeSelect.innerHTML = '<option value="">Select Course Code</option>';
+  courseCatalog.forEach(course => {
+    courseCodeSelect.innerHTML += `<option value="${course.course_code}" data-name="${course.course_name}">${course.course_code} - ${course.course_name}</option>`;
+  });
+
+  // Professor Dropdown
+  const professorSelect = document.getElementById('professorSelect');
+  professorSelect.innerHTML = '<option value="">Select Professor (Optional)</option>';
+  professors.forEach(prof => {
+    professorSelect.innerHTML += `<option value="${prof.name}">${prof.name}</option>`;
+  });
+
+  // Grade Dropdown
+  const gradeSelect = document.getElementById('gradeSelect');
+  gradeSelect.innerHTML = `
+    <option value="">Select Grade (Optional)</option>
+    <option value="A+">A+ (97-100%)</option>
+    <option value="A">A (93-96%)</option>
+    <option value="A-">A- (90-92%)</option>
+    <option value="B+">B+ (87-89%)</option>
+    <option value="B">B (83-86%)</option>
+    <option value="B-">B- (80-82%)</option>
+    <option value="C+">C+ (77-79%)</option>
+    <option value="C">C (73-76%)</option>
+    <option value="C-">C- (70-72%)</option>
+    <option value="D+">D+ (67-69%)</option>
+    <option value="D">D (65-66%)</option>
+    <option value="F">F (Below 65%)</option>
+    <option value="P">P (Pass)</option>
+    <option value="S">S (Satisfactory)</option>
   `;
-}
 
-function initTutorEvents() {
-  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
-    const bio      = document.getElementById('bioInput').value;
-    const rate     = document.getElementById('rateInput').value;
-    const feedback = document.getElementById('saveFeedback');
-    const btn      = document.getElementById('saveProfileBtn');
-    btn.textContent = 'Saving...';
-    btn.disabled = true;
-    feedback.classList.add('hidden');
-    try {
-      const res  = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bio, hourly_rate: rate })
-      });
-      const data = await res.json();
-      feedback.textContent = !res.ok ? (data.error || 'Could not save.') : '✅ Profile saved!';
-      feedback.className   = `save-feedback ${!res.ok ? 'error' : 'success'}`;
-      feedback.classList.remove('hidden');
-      setTimeout(() => feedback.classList.add('hidden'), 3000);
-    } catch {
-      feedback.textContent = 'Network error.';
-      feedback.className   = 'save-feedback error';
-      feedback.classList.remove('hidden');
-    }
-    btn.textContent = '💾 Save Changes';
-    btn.disabled = false;
-  });
-
-  document.getElementById('addCourseBtn').addEventListener('click', async () => {
-    const code     = document.getElementById('newCode').value.trim();
-    const name     = document.getElementById('newName').value.trim();
-    const prof     = document.getElementById('newProf').value.trim();
-    const grade    = document.getElementById('newGrade').value.trim();
-    const feedback = document.getElementById('courseFeedback');
-    const btn      = document.getElementById('addCourseBtn');
-
-    if (!code || !name) {
-      feedback.textContent = 'Course code and name are required.';
-      feedback.className   = 'save-feedback error';
-      feedback.classList.remove('hidden');
-      return;
-    }
-    btn.textContent = 'Adding...';
-    btn.disabled = true;
-    try {
-      const res  = await fetch('/api/profile/courses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ course_code: code, course_name: name, professor: prof, grade })
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        feedback.textContent = data.error || 'Could not add course.';
-        feedback.className   = 'save-feedback error';
-        feedback.classList.remove('hidden');
-      } else {
-        const list   = document.getElementById('coursesList');
-        const newRow = document.createElement('div');
-        newRow.className = 'course-manage-row';
-        newRow.id = `course-row-${data.id}`;
-        newRow.innerHTML = `
-          <span class="course-manage-code">${code.toUpperCase()}</span>
-          <span class="course-manage-name">${name}</span>
-          <span class="course-manage-meta">${prof ? '👨‍🏫 ' + prof : ''} ${grade ? '· ' + grade : ''}</span>
-          <button class="btn-delete-course" onclick="deleteCourse(${data.id})">Remove</button>
-        `;
-        const empty = list.querySelector('p');
-        if (empty) empty.remove();
-        list.appendChild(newRow);
-        document.getElementById('newCode').value  = '';
-        document.getElementById('newName').value  = '';
-        document.getElementById('newProf').value  = '';
-        document.getElementById('newGrade').value = '';
-        feedback.textContent = '✅ Course added!';
-        feedback.className   = 'save-feedback success';
-        feedback.classList.remove('hidden');
-        setTimeout(() => feedback.classList.add('hidden'), 3000);
-      }
-    } catch {
-      feedback.textContent = 'Network error.';
-      feedback.className   = 'save-feedback error';
-      feedback.classList.remove('hidden');
-    }
-    btn.textContent = 'Add Course';
-    btn.disabled = false;
+  // Auto-fill course name when course code is selected
+  courseCodeSelect.addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const courseName = selectedOption.getAttribute('data-name') || '';
+    document.getElementById('courseNameInput').value = courseName;
   });
 }
 
-async function deleteCourse(id) {
-  if (!confirm('Remove this course from your profile?')) return;
+async function saveTutorProfile() {
+  const bio = document.getElementById('bioTextarea').value;
+  const hourlyRate = document.getElementById('hourlyRateInput').value;
+
+  if (!hourlyRate || isNaN(hourlyRate) || parseFloat(hourlyRate) < 1) {
+    showFeedback('Please enter a valid hourly rate.', 'error');
+    return;
+  }
+
   try {
-    const res  = await fetch(`/api/profile/courses/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (data.success) {
-      const row = document.getElementById(`course-row-${id}`);
-      if (row) row.remove();
-      const list = document.getElementById('coursesList');
-      if (list && list.children.length === 0) {
-        list.innerHTML = '<p style="color:#aaa;font-size:0.9rem;padding:8px 0;">No courses added yet.</p>';
-      }
+    const response = await fetch('/api/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bio, hourly_rate: parseFloat(hourlyRate) })
+    });
+
+    if (response.ok) {
+      showFeedback('Profile updated successfully!', 'success');
+    } else {
+      const error = await response.json();
+      showFeedback(error.error || 'Could not update profile', 'error');
     }
-  } catch {
-    alert('Could not remove course. Please try again.');
+  } catch (error) {
+    showFeedback('Network error. Please try again.', 'error');
   }
 }
 
-// ── Notification badge ────────────────────────────────────────────────
-function loadNotifBadge() {
-  fetch('/api/notifications/unread-count')
-    .then(r => r.json())
-    .then(data => {
-      const badge = document.getElementById('sidebarBadge');
-      if (!badge) return;
-      if (data.count > 0) {
-        badge.textContent = data.count;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
+async function addCourse() {
+  const courseCode = document.getElementById('courseCodeSelect').value;
+  const courseName = document.getElementById('courseNameInput').value;
+  const professor = document.getElementById('professorSelect').value;
+  const grade = document.getElementById('gradeSelect').value;
+
+  if (!courseCode || !courseName) {
+    showFeedback('Please select a course code.', 'error');
+    return;
+  }
+
+  // Check if course already exists
+  if (userCourses.some(course => course.course_code === courseCode)) {
+    showFeedback('You have already added this course.', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/profile/courses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        course_code: courseCode,
+        course_name: courseName,
+        professor: professor || '',
+        grade: grade || ''
+      })
     });
+
+    if (response.ok) {
+      const result = await response.json();
+      
+      // Add to local array
+      userCourses.push({
+        id: result.id,
+        course_code: courseCode,
+        course_name: courseName,
+        professor: professor || '',
+        grade: grade || ''
+      });
+      
+      displayUserCourses();
+      
+      // Reset form
+      document.getElementById('courseCodeSelect').value = '';
+      document.getElementById('courseNameInput').value = '';
+      document.getElementById('professorSelect').value = '';
+      document.getElementById('gradeSelect').value = '';
+      
+      showFeedback('Course added successfully!', 'success');
+    } else {
+      const error = await response.json();
+      showFeedback(error.error || 'Could not add course', 'error');
+    }
+  } catch (error) {
+    showFeedback('Network error. Please try again.', 'error');
+  }
 }
 
-loadNotifBadge();
-setInterval(loadNotifBadge, 30000);
+async function deleteCourse(courseId) {
+  if (!confirm('Are you sure you want to remove this course?')) return;
+
+  try {
+    const response = await fetch(`/api/profile/courses/${courseId}`, {
+      method: 'DELETE'
+    });
+
+    if (response.ok) {
+      userCourses = userCourses.filter(course => course.id !== courseId);
+      displayUserCourses();
+      showFeedback('Course removed successfully!', 'success');
+    } else {
+      const error = await response.json();
+      showFeedback(error.error || 'Could not remove course', 'error');
+    }
+  } catch (error) {
+    showFeedback('Network error. Please try again.', 'error');
+  }
+}
+
+function showFeedback(message, type = 'info') {
+  // Create feedback element if it doesn't exist
+  let feedback = document.getElementById('feedback');
+  if (!feedback) {
+    feedback = document.createElement('div');
+    feedback.id = 'feedback';
+    feedback.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      transition: all 0.3s ease;
+      max-width: 300px;
+    `;
+    document.body.appendChild(feedback);
+  }
+
+  // Set message and style
+  feedback.textContent = message;
+  feedback.className = type;
+
+  if (type === 'success') {
+    feedback.style.background = '#00d4aa';
+    feedback.style.color = 'white';
+  } else if (type === 'error') {
+    feedback.style.background = '#e74c3c';
+    feedback.style.color = 'white';
+  } else {
+    feedback.style.background = '#F76900';
+    feedback.style.color = 'white';
+  }
+
+  // Show and auto-hide
+  feedback.style.display = 'block';
+  feedback.style.opacity = '1';
+
+  setTimeout(() => {
+    if (feedback) {
+      feedback.style.opacity = '0';
+      setTimeout(() => {
+        if (feedback && feedback.parentNode) {
+          feedback.parentNode.removeChild(feedback);
+        }
+      }, 300);
+    }
+  }, 3000);
+}

@@ -309,3 +309,288 @@
   color: #e74c3c;
   border-left: 3px solid #e74c3c;
 }
+
+/* ───────────────────────────────────────────────────────────────────── */
+/* ── MOBILE RESPONSIVE ─────────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .profile-page-wrapper {
+    margin: 16px auto;
+    padding: 0 16px;
+    gap: 20px;
+  }
+
+  .profile-header-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px 20px;
+    gap: 16px;
+  }
+
+  .profile-big-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 1.8rem;
+    margin: 0 auto;
+  }
+
+  .profile-header-info h1 {
+    font-size: 1.4rem;
+  }
+
+  .profile-header-info p {
+    font-size: 0.85rem;
+  }
+
+  .verified-tag {
+    margin-left: 0;
+    margin-top: 6px;
+  }
+
+  .profile-section {
+    padding: 20px 16px;
+  }
+
+  .profile-section h2 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+  }
+
+  .course-manage-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 14px;
+  }
+
+  .course-manage-code {
+    min-width: auto;
+    font-size: 0.85rem;
+  }
+
+  .course-manage-name {
+    font-size: 0.85rem;
+  }
+
+  .course-manage-meta {
+    font-size: 0.75rem;
+  }
+
+  .btn-delete-course {
+    align-self: flex-end;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    padding: 3px 10px;
+  }
+
+  .course-form-grid,
+  .course-form-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .add-course-form {
+    padding: 16px;
+  }
+
+  .add-course-form h3 {
+    font-size: 0.9rem;
+  }
+
+  .add-course-form input {
+    padding: 12px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .btn-add-course {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .btn-save {
+    width: 100%;
+    padding: 14px;
+    font-size: 1rem;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-page-wrapper {
+    padding: 0 12px;
+    gap: 16px;
+  }
+
+  .profile-header-card {
+    padding: 20px 16px;
+  }
+
+  .profile-big-avatar {
+    width: 56px;
+    height: 56px;
+    font-size: 1.6rem;
+  }
+
+  .profile-header-info h1 {
+    font-size: 1.2rem;
+    margin-bottom: 2px;
+  }
+
+  .profile-header-info p {
+    font-size: 0.82rem;
+    margin-bottom: 6px;
+  }
+
+  .profile-role-badge {
+    font-size: 0.78rem;
+    padding: 3px 10px;
+  }
+
+  .verified-tag {
+    font-size: 0.78rem;
+    padding: 3px 10px;
+  }
+
+  .profile-section {
+    padding: 16px 12px;
+  }
+
+  .profile-section h2 {
+    font-size: 0.95rem;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+  }
+
+  .profile-form {
+    gap: 12px;
+  }
+
+  .profile-form input,
+  .profile-form textarea {
+    padding: 12px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .profile-form textarea {
+    min-height: 80px;
+  }
+
+  .course-manage-row {
+    padding: 12px;
+  }
+
+  .add-course-form {
+    padding: 14px;
+  }
+
+  .add-course-form h3 {
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+
+  .btn-save {
+    padding: 14px;
+    font-size: 0.95rem;
+  }
+
+  .save-feedback {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+}
+
+/* ── Course Dropdown Styles ─────────────────────────────────────────── */
+.course-dropdown {
+  padding: 10px 12px;
+  border: 2px solid #e0e4ef;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  outline: none;
+  background: white;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  cursor: pointer;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.course-dropdown:focus {
+  border-color: #F76900;
+}
+
+.course-dropdown option {
+  padding: 8px;
+  font-size: 0.85rem;
+}
+
+/* Style for readonly course name input */
+#courseNameInput[readonly] {
+  background: #f8f9fa;
+  color: #495057;
+  cursor: not-allowed;
+}
+
+/* Enhanced course form grid */
+.course-form-grid .input-group,
+.course-form-grid-2 .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.course-form-grid .input-group label,
+.course-form-grid-2 .input-group label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #000E54;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Scrollable dropdown styling */
+.course-dropdown {
+  scrollbar-width: thin;
+  scrollbar-color: #F76900 #f1f1f1;
+}
+
+.course-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.course-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.course-dropdown::-webkit-scrollbar-thumb {
+  background: #F76900;
+  border-radius: 4px;
+}
+
+.course-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #e05e00;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .course-dropdown {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px;
+  }
+  
+  .course-dropdown option {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .course-dropdown {
+    max-height: 150px;
+  }
+}

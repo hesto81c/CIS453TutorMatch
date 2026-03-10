@@ -561,3 +561,213 @@
 }
 
 .btn-submit-review:hover { opacity: 0.9; }
+
+/* ───────────────────────────────────────────────────────────────────── */
+/* ── MOBILE RESPONSIVE ─────────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .tutor-profile-header {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px 20px;
+    gap: 20px;
+  }
+
+  .tutor-profile-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 1.8rem;
+    margin: 0 auto;
+  }
+
+  .tutor-profile-info {
+    min-width: auto;
+  }
+
+  .tutor-profile-info h1 {
+    font-size: 1.5rem;
+  }
+
+  .tutor-profile-meta {
+    justify-content: center;
+  }
+
+  .tutor-rate-big {
+    font-size: 1.6rem;
+  }
+
+  .btn-book-session {
+    width: 100%;
+    padding: 14px;
+    font-size: 1.05rem;
+  }
+
+  .tutor-bio-section,
+  .tutor-courses-section {
+    padding: 20px 16px;
+  }
+
+  .tutor-bio-section h2,
+  .tutor-courses-section h2 {
+    font-size: 1rem;
+  }
+
+  .course-card {
+    padding: 14px 16px;
+  }
+
+  .course-card-code {
+    font-size: 0.9rem;
+  }
+
+  .course-card-name {
+    font-size: 0.88rem;
+  }
+
+  /* ── Modal adjustments ── */
+  .modal {
+    max-width: 95vw;
+    margin: 10px;
+  }
+
+  .modal-body {
+    padding: 20px 16px;
+    max-height: 60vh;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+  }
+
+  .modal-footer {
+    padding: 16px 20px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-cancel-modal,
+  .btn-confirm-booking {
+    flex: none;
+    width: 100%;
+  }
+
+  .session-type-selector {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .session-type-btn {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .session-icon {
+    font-size: 1.4rem;
+  }
+
+  .session-desc {
+    text-align: left;
+  }
+
+  .reviews-avg {
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
+  }
+
+  .reviews-avg .big-rating {
+    font-size: 2rem;
+  }
+
+  .review-card {
+    padding: 16px;
+  }
+
+  .review-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .review-form-card {
+    padding: 16px;
+  }
+
+  .star-picker {
+    font-size: 1.6rem;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .tutor-profile-header {
+    padding: 20px 16px;
+  }
+
+  .tutor-profile-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 1.6rem;
+  }
+
+  .tutor-profile-info h1 {
+    font-size: 1.3rem;
+  }
+
+  .tutor-rate-big {
+    font-size: 1.4rem;
+  }
+
+  .tutor-bio-section,
+  .tutor-courses-section {
+    padding: 16px 12px;
+  }
+
+  /* ── Modal full screen on tiny screens ── */
+  .modal {
+    margin: 0;
+    border-radius: 0;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+  }
+
+  .modal-body {
+    padding: 16px;
+    max-height: calc(100vh - 140px);
+  }
+
+  .modal .input-group input,
+  .modal .input-group select,
+  .modal .input-group textarea {
+    padding: 12px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .session-type-btn {
+    padding: 10px 12px;
+  }
+
+  .session-icon {
+    font-size: 1.2rem;
+  }
+
+  .reviews-avg .big-rating {
+    font-size: 1.8rem;
+  }
+
+  .review-form-card {
+    padding: 14px;
+  }
+
+  .review-form-card textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .star-picker {
+    font-size: 1.4rem;
+  }
+}

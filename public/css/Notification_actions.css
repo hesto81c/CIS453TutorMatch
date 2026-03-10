@@ -1,0 +1,224 @@
+/* ── Notification Action Buttons ─────────────────────────────────────── */
+.notif-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn-accept-notif,
+.btn-reject-notif {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  flex: 1;
+}
+
+.btn-accept-notif {
+  background: linear-gradient(135deg, #00d4aa, #00b894);
+  color: white;
+}
+
+.btn-accept-notif:hover {
+  background: linear-gradient(135deg, #00b894, #00a085);
+  transform: translateY(-1px);
+}
+
+.btn-reject-notif {
+  background: #f8f9fa;
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+}
+
+.btn-reject-notif:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+/* ── Rejection Modal ──────────────────────────────────────────────────── */
+.reject-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 14, 84, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.reject-modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 40px rgba(0, 14, 84, 0.25);
+  border: 1px solid rgba(247, 105, 0, 0.2);
+}
+
+.reject-modal-header {
+  background: linear-gradient(135deg, #000E54, #001580);
+  padding: 16px 20px;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #F76900;
+}
+
+.reject-modal-header h3 {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.close-reject-modal {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.close-reject-modal:hover {
+  background: rgba(247, 105, 0, 0.5);
+}
+
+.reject-modal-body {
+  padding: 20px;
+}
+
+.reject-modal-body label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #000E54;
+  margin-bottom: 8px;
+}
+
+#rejectReason {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 2px solid #e0e4ef;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+#rejectReason:focus {
+  border-color: #F76900;
+}
+
+.reject-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn-cancel-reject,
+.btn-confirm-reject {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-cancel-reject {
+  background: #f8f9fa;
+  color: #666;
+  border: 2px solid #e0e4ef;
+}
+
+.btn-cancel-reject:hover {
+  background: #e8eaf0;
+  color: #000E54;
+}
+
+.btn-confirm-reject {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  box-shadow: 0 3px 10px rgba(231, 76, 60, 0.3);
+}
+
+.btn-confirm-reject:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+/* ── Mobile responsive adjustments ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .reject-modal {
+    margin: 10px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .reject-modal-header {
+    padding: 12px 16px;
+  }
+
+  .reject-modal-header h3 {
+    font-size: 1rem;
+  }
+
+  .reject-modal-body {
+    padding: 16px;
+  }
+
+  .notif-actions {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .btn-accept-notif,
+  .btn-reject-notif {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  #rejectReason {
+    min-height: 80px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .reject-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .reject-modal {
+    margin: 5px;
+    max-width: calc(100vw - 10px);
+    border-radius: 12px;
+  }
+
+  .reject-modal-header {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .reject-modal-header h3 {
+    font-size: 0.95rem;
+  }
+}

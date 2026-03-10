@@ -136,3 +136,147 @@
   text-align: center;
   line-height: 1.4;
 }
+
+/* ───────────────────────────────────────────────────────────────────── */
+/* ── MOBILE RESPONSIVE ─────────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .notifications-page {
+    max-width: none;
+    margin: 0;
+    padding: 0 16px;
+  }
+
+  .notifications-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .notifications-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .notifications-header p {
+    font-size: 0.85rem;
+  }
+
+  .btn-read-all {
+    align-self: flex-end;
+    padding: 8px 16px;
+    font-size: 0.82rem;
+  }
+
+  .notifications-list {
+    gap: 8px;
+  }
+
+  .notif-card {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .notif-icon {
+    font-size: 1.6rem;
+  }
+
+  .notif-title {
+    font-size: 0.9rem;
+  }
+
+  .notif-message {
+    font-size: 0.82rem;
+  }
+
+  .notif-time {
+    font-size: 0.72rem;
+  }
+
+  .empty-notifications {
+    padding: 40px 16px;
+  }
+
+  .empty-notifications .icon {
+    font-size: 3.5rem;
+    margin-bottom: 12px;
+  }
+
+  .empty-notifications h3 {
+    font-size: 1.1rem;
+  }
+
+  .empty-notifications p {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .notifications-page {
+    padding: 0 12px;
+  }
+
+  .notifications-header {
+    margin-bottom: 16px;
+  }
+
+  .notifications-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .notifications-header p {
+    font-size: 0.82rem;
+    margin-top: 2px;
+  }
+
+  .btn-read-all {
+    padding: 7px 14px;
+    font-size: 0.78rem;
+  }
+
+  .notif-card {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .notif-icon {
+    font-size: 1.4rem;
+  }
+
+  .notif-title {
+    font-size: 0.85rem;
+    margin-bottom: 3px;
+  }
+
+  .notif-message {
+    font-size: 0.8rem;
+  }
+
+  .notif-time {
+    font-size: 0.7rem;
+    margin-top: 4px;
+  }
+
+  .notif-unread-dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 4px;
+  }
+
+  .empty-notifications {
+    padding: 32px 12px;
+  }
+
+  .empty-notifications .icon {
+    font-size: 3rem;
+  }
+
+  .empty-notifications h3 {
+    font-size: 1rem;
+  }
+
+  .empty-notifications p {
+    font-size: 0.8rem;
+  }
+}

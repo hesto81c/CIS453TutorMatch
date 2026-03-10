@@ -479,10 +479,211 @@
 
 .app-footer span { color: #F76900; font-weight: 700; }
 
-/* ── Responsive ── */
-@media (max-width: 768px) {
-  .sidebar { display: none; }
-  .main-content { padding: 16px; }
-  .search-bar { flex-direction: column; }
-  .btn-search { width: 100%; }
+/* ───────────────────────────────────────────────────────────────────── */
+/* ── MOBILE RESPONSIVE ─────────────────────────────────────────────── */
+/* ───────────────────────────────────────────────────────────────────── */
+
+/* ── Mobile hamburger menu ── */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.4rem;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.mobile-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1001;
+}
+
+@media (max-width: 950px) {
+  .topnav {
+    padding: 0 20px;
+  }
+
+  .topnav-right {
+    gap: 12px;
+  }
+
+  .nav-user {
+    display: none;
+  }
+
+  .nav-role {
+    font-size: 0.75rem;
+    padding: 3px 10px;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .mobile-menu-toggle {
+    display: block;
+  }
+
+  .sidebar.mobile-open {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1002;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+  }
+
+  .mobile-sidebar-overlay.show {
+    display: block;
+  }
+
+  .main-content {
+    padding: 20px;
+  }
+
+  .search-section {
+    padding: 24px 20px;
+  }
+
+  .page-title {
+    font-size: 1.6rem;
+  }
+
+  .search-bar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-search {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .results-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .tutor-card {
+    padding: 18px;
+  }
+
+  .tutor-card-header {
+    gap: 12px;
+  }
+
+  .tutor-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+  }
+
+  .tutor-card-info h3 {
+    font-size: 0.95rem;
+  }
+
+  .tutor-meta {
+    gap: 6px;
+  }
+
+  .course-tag {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .topnav {
+    height: 56px;
+    padding: 0 16px;
+  }
+
+  .logo-circle.small {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nav-brand {
+    font-size: 1rem;
+  }
+
+  .nav-role {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+  }
+
+  .main-content {
+    padding: 16px;
+  }
+
+  .search-section {
+    padding: 20px 16px;
+    margin-bottom: 20px;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+  }
+
+  .page-subtitle {
+    font-size: 0.88rem;
+    margin-bottom: 18px;
+  }
+
+  .search-bar input {
+    padding: 12px 14px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .btn-search {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+
+  .quick-chips {
+    gap: 6px;
+  }
+
+  .chip {
+    font-size: 0.78rem;
+    padding: 5px 12px;
+  }
+
+  .results-header {
+    margin-bottom: 12px;
+  }
+
+  .results-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .tutor-card {
+    padding: 16px;
+  }
+
+  .tutor-card-footer {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .rate {
+    font-size: 1rem;
+  }
+
+  .btn-view {
+    width: 100%;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .sidebar {
+    width: 280px;
+  }
 }

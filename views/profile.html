@@ -7,37 +7,42 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dashboard.css">
   <link rel="stylesheet" href="/css/profile.css">
-  <link rel="stylesheet" href="/css/notifications.css">
 </head>
 <body class="app-body">
-
+  <!-- Top stripe -->
   <div class="top-stripe"></div>
 
+  <!-- Top navigation -->
   <nav class="topnav">
     <div class="topnav-left">
-      <div class="logo-circle small"><img src="/logo.png" alt="TutorMatch"></div>
-      <span class="nav-brand">
-        <span style="color:#ffffff;font-weight:800;">Tutor</span><span style="color:#F76900;font-weight:800;">Match</span>
-      </span>
+      <button class="mobile-menu-toggle">☰</button>
+      <div class="logo-circle small">
+        <img src="/logo.png" alt="TutorMatch">
+      </div>
+      <div class="nav-brand">
+        <span style="color: white;">Tutor</span><span style="color: #F76900;">Match</span>
+      </div>
     </div>
     <div class="topnav-right">
-      <span class="nav-user">👤 <span id="navUserName">...</span></span>
-      <span class="nav-role" id="navUserRole"></span>
-      <a href="/logout" class="nav-logout">Log out</a>
+      <span class="nav-user" id="navUser">Loading...</span>
+      <span class="nav-role" id="navRole">Student</span>
+      <a href="/logout" class="nav-logout">Logout</a>
     </div>
   </nav>
 
+  <!-- Mobile sidebar overlay -->
+  <div class="mobile-sidebar-overlay"></div>
+
+  <!-- App layout -->
   <div class="app-layout">
+    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="logo-circle small"><img src="/logo.png" alt="TutorMatch"></div>
-        <span>
-          <span style="color:#ffffff;font-weight:800;">Tutor</span><span style="color:#F76900;font-weight:800;">Match</span>
-        </span>
+        <span style="color: white;">Tutor</span><span style="color: #F76900;">Match</span>
       </div>
       <nav class="sidebar-nav">
         <a href="/dashboard" class="sidebar-item">
-          <span class="s-icon">🔍</span> Find a Tutor
+          <span class="s-icon">🏠</span> Dashboard
         </a>
         <a href="/bookings" class="sidebar-item">
           <span class="s-icon">📅</span> My Bookings
@@ -45,31 +50,131 @@
         <a href="/messages" class="sidebar-item">
           <span class="s-icon">💬</span> Messages
         </a>
-        <a href="/notifications" class="sidebar-item" id="notifLink">
-          <span class="s-icon">🔔</span> Notifications
-          <span class="notif-badge hidden" id="sidebarBadge"></span>
-        </a>
-        <a href="/tutor-dashboard" class="sidebar-item" id="tutorDashLink" style="display:none">
-          <span class="s-icon">🎓</span> Tutor Dashboard
-        </a>
         <a href="/profile" class="sidebar-item active">
           <span class="s-icon">👤</span> My Profile
         </a>
+        <a href="/notifications" class="sidebar-item">
+          <span class="s-icon">🔔</span> Notifications
+          <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+        </a>
+        <a href="/tutor-dashboard" class="sidebar-item" id="tutorDashboardLink" style="display: none;">
+          <span class="s-icon">📊</span> Tutor Dashboard
+        </a>
       </nav>
       <div class="sidebar-footer">
-        Syracuse University<br>
-        <span>#OrangeNation</span>
+        <p>Syracuse University<br><span>#OrangeNation</span></p>
       </div>
     </aside>
 
+    <!-- Main content -->
     <main class="main-content">
-      <div id="loadingState" style="text-align:center;padding:40px;color:#888;">Loading your profile...</div>
-      <div id="profilePage" class="profile-page-wrapper hidden"></div>
+      <div class="profile-page-wrapper">
+        <!-- Profile Header Card -->
+        <div class="profile-header-card">
+          <div class="profile-big-avatar" id="profileAvatar">U</div>
+          <div class="profile-header-info">
+            <h1 id="profileName">Loading...</h1>
+            <p id="profileEmail">Loading...</p>
+            <p id="profileUniversity">Loading...</p>
+            <span class="profile-role-badge" id="profileRole">Loading...</span>
+            <span class="verified-tag" id="verifiedTag" style="display: none;">✓ Verified</span>
+          </div>
+        </div>
+
+        <!-- Student Info (for students only) -->
+        <div class="profile-section" id="studentSection">
+          <h2>📚 Student Information</h2>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Full Name</label>
+              <p id="studentName">-</p>
+            </div>
+            <div class="info-item">
+              <label>University</label>
+              <p id="studentUniversity">-</p>
+            </div>
+            <div class="info-item">
+              <label>Email</label>
+              <p id="studentEmail">-</p>
+            </div>
+            <div class="info-item">
+              <label>Role</label>
+              <p id="studentRole">-</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tutor Sections (for tutors only) -->
+        <div id="tutorSections" style="display: none;">
+          
+          <!-- Tutor Profile Section -->
+          <div class="profile-section">
+            <h2>🎓 Tutor Profile</h2>
+            <form class="profile-form" onsubmit="saveTutorProfile(); return false;">
+              <div class="input-group">
+                <label for="bioTextarea">Bio</label>
+                <textarea id="bioTextarea" placeholder="Tell students about your tutoring experience, teaching style, and what makes you a great tutor..."></textarea>
+              </div>
+              <div class="input-group">
+                <label for="hourlyRateInput">Hourly Rate ($)</label>
+                <input type="number" id="hourlyRateInput" placeholder="25" min="1" step="0.01">
+              </div>
+              <button type="submit" class="btn-save">Save Profile</button>
+            </form>
+          </div>
+
+          <!-- My Courses Section -->
+          <div class="profile-section">
+            <h2>📖 My Courses</h2>
+            
+            <!-- Existing courses -->
+            <div class="courses-manager" id="userCourses">
+              <!-- Courses will be loaded here -->
+            </div>
+
+            <!-- Add new course form with dropdowns -->
+            <div class="add-course-form">
+              <h3>➕ Add Course</h3>
+              
+              <div class="course-form-grid">
+                <div class="input-group">
+                  <label for="courseCodeSelect">Course Code</label>
+                  <select id="courseCodeSelect" class="course-dropdown">
+                    <option value="">Loading courses...</option>
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label for="courseNameInput">Course Name</label>
+                  <input type="text" id="courseNameInput" readonly placeholder="Auto-filled when you select a course">
+                </div>
+              </div>
+
+              <div class="course-form-grid-2">
+                <div class="input-group">
+                  <label for="professorSelect">Professor</label>
+                  <select id="professorSelect" class="course-dropdown">
+                    <option value="">Loading professors...</option>
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label for="gradeSelect">Grade Received</label>
+                  <select id="gradeSelect" class="course-dropdown">
+                    <option value="">Loading grades...</option>
+                  </select>
+                </div>
+              </div>
+
+              <button type="button" class="btn-add-course" onclick="addCourse()">Add Course</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
+  <!-- App footer -->
   <footer class="app-footer">
-    🍊 <span>#OrangeNation</span> · Syracuse University · tutormatch.syr.edu
+    <p>Syracuse University · <span>TutorMatch</span> · #OrangeNation</p>
   </footer>
 
   <script src="/js/profile.js"></script>
