@@ -1,14 +1,15 @@
-// ── My Bookings Page ─────────────────────────────────────────────────────
+// My Bookings page
 
 const sessionTypeLabels = {
   one_on_one: '👤 1-on-1',
-  group:      '👥 Group',
-  resources:  '📚 Resources'
+  group: '👥 Group',
+  resources: '📚 Resources'
 };
 
 fetch('/api/me')
   .then(res => res.json())
   .then(user => {
+    console.log('USER DEBUG:', user);
     document.getElementById('navUserName').textContent = user.full_name;
     const roleEl = document.getElementById('navUserRole');
     if (roleEl) roleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
@@ -22,6 +23,7 @@ fetch('/api/me')
 fetch('/api/bookings')
   .then(res => res.json())
   .then(bookings => {
+    console.log('BOOKINGS DEBUG:', bookings);
     document.getElementById('loadingState').classList.add('hidden');
 
     if (!bookings || bookings.length === 0) {
@@ -33,32 +35,39 @@ fetch('/api/bookings')
     list.classList.remove('hidden');
 
     list.innerHTML = bookings.map(b => {
-      const date    = new Date(b.scheduled_at);
+      console.log(`Booking ${b.id}: status=${b.status}, payment_status=${b.payment_status}, hourly_rate=${b.hourly_rate}`);
+
+      const date = new Date(b.scheduled_at);
       const dateStr = date.toLocaleDateString('en-US', {
         weekday: 'long',
-        year:    'numeric',
-        month:   'long',
-        day:     'numeric'
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
       });
       const timeStr = date.toLocaleTimeString('en-US', {
-        hour:   '2-digit',
+        hour: '2-digit',
         minute: '2-digit'
       });
 
       const statusLabel = {
-        pending:   '⏳ Pending',
+        pending: '⏳ Pending',
         confirmed: '✅ Confirmed',
         cancelled: '❌ Cancelled',
         completed: '🎓 Completed'
       }[b.status] || b.status;
 
-      const sessionLabel  = sessionTypeLabels[b.session_type] || '👤 1-on-1';
-      const canCancel     = b.status === 'pending';
-      const canReview     = b.status === 'completed';
-      const canPay        = b.status === 'confirmed' &&
-                            (!b.payment_status || b.payment_status === 'pending' || b.payment_status === 'unpaid');
-      const isResources   = b.session_type === 'resources';
+      const sessionLabel = sessionTypeLabels[b.session_type] || '👤 1-on-1';
+
+      const canCancel = b.status === 'pending';
+      const canReview = b.status === 'completed';
+
+      const canPay = b.status === 'confirmed' &&
+                    (!b.payment_status || b.payment_status === 'pending' || b.payment_status === 'unpaid');
+
+      const isResources = b.session_type === 'resources';
       const paymentStatus = b.payment_status || 'pending';
+
+      console.log(`Booking ${b.id} - canPay: ${canPay} (status: ${b.status}, payment_status: ${paymentStatus})`);
 
       return `
         <div class="booking-card status-${b.status}" id="booking-${b.id}">
@@ -75,15 +84,14 @@ fetch('/api/bookings')
               $${parseFloat(b.hourly_rate).toFixed(2)}/hr
               ${b.is_verified ? '· ✅ Verified Tutor' : ''}
             </div>
-            ${paymentStatus === 'paid'
-              ? `<div style="font-size:0.8rem;color:#27ae60;margin-top:4px;font-weight:600;">
-                   💳 Payment: Paid
-                 </div>`
-              : paymentStatus === 'unpaid' || paymentStatus === 'pending'
-              ? `<div style="font-size:0.8rem;color:#f39c12;margin-top:4px;font-weight:600;">
-                   💳 Payment: Pending
-                 </div>`
-              : ''
+            ${paymentStatus === 'paid' ?
+              `<div style="font-size:0.8rem;color:#27ae60;margin-top:4px;font-weight:600;">
+                 💳 Payment: Paid
+               </div>` :
+              paymentStatus === 'unpaid' || paymentStatus === 'pending' ?
+              `<div style="font-size:0.8rem;color:#f39c12;margin-top:4px;font-weight:600;">
+                 💳 Payment: Pending
+               </div>` : ''
             }
           </div>
           <div class="booking-right">
@@ -91,8 +99,8 @@ fetch('/api/bookings')
             ${canCancel ? `<button class="btn-cancel-booking" onclick="cancelBooking(${b.id})">Cancel</button>` : ''}
             ${canPay ? `
               <button class="btn-pay-booking" onclick="openPaymentModal(
-                ${b.id},
-                '${b.tutor_name.replace(/'/g, "\\'")}',
+                ${b.id}, 
+                '${b.tutor_name.replace(/'/g, "\\'")}', 
                 ${b.hourly_rate}
               )">
                 💳 Pay Now
@@ -128,7 +136,7 @@ fetch('/api/bookings')
       let selected = 0;
       picker.querySelectorAll('span').forEach(star => {
         star.addEventListener('mouseover', () => highlightStars(picker, parseInt(star.dataset.val)));
-        star.addEventListener('mouseout',  () => highlightStars(picker, selected));
+        star.addEventListener('mouseout', () => highlightStars(picker, selected));
         star.addEventListener('click', () => {
           selected = parseInt(star.dataset.val);
           picker.dataset.rating = selected;
@@ -142,8 +150,6 @@ fetch('/api/bookings')
     document.getElementById('loadingState').textContent = 'Could not load bookings.';
   });
 
-// ── Star picker ───────────────────────────────────────────────────────────
-
 function highlightStars(picker, count) {
   picker.querySelectorAll('span').forEach(s => {
     s.classList.toggle('lit', parseInt(s.dataset.val) <= count);
@@ -154,12 +160,10 @@ function toggleReviewForm(id) {
   document.getElementById(`reviewForm-${id}`).classList.toggle('hidden');
 }
 
-// ── Submit review ─────────────────────────────────────────────────────────
-
 async function submitReview(bookingId) {
-  const picker   = document.getElementById(`stars-${bookingId}`);
-  const rating   = parseInt(picker.dataset.rating || 0);
-  const comment  = document.getElementById(`comment-${bookingId}`).value;
+  const picker = document.getElementById(`stars-${bookingId}`);
+  const rating = parseInt(picker.dataset.rating || 0);
+  const comment = document.getElementById(`comment-${bookingId}`).value;
   const feedback = document.getElementById(`reviewFeedback-${bookingId}`);
 
   if (!rating) {
@@ -169,10 +173,10 @@ async function submitReview(bookingId) {
   }
 
   try {
-    const res  = await fetch('/api/reviews', {
-      method:  'POST',
+    const res = await fetch('/api/reviews', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ booking_id: bookingId, rating, comment })
+      body: JSON.stringify({ booking_id: bookingId, rating, comment })
     });
     const data = await res.json();
 
@@ -192,8 +196,6 @@ async function submitReview(bookingId) {
   }
 }
 
-// ── Cancel booking ────────────────────────────────────────────────────────
-
 function cancelBooking(id) {
   if (!confirm('Are you sure you want to cancel this booking?')) return;
   fetch(`/api/bookings/${id}/cancel`, { method: 'PATCH' })
@@ -209,21 +211,23 @@ function cancelBooking(id) {
         if (btn) btn.remove();
       }
     })
-    .catch(() => showFeedback('Could not cancel. Please try again.', 'error'));
+    .catch(() => alert('Could not cancel. Please try again.'));
 }
 
-// ── Payment modal ─────────────────────────────────────────────────────────
-
+// Payment Modal Functions
 function openPaymentModal(bookingId, tutorName, hourlyRate) {
+  console.log('Opening payment modal for:', { bookingId, tutorName, hourlyRate });
+
   const container = document.getElementById('payment-modal-container');
   if (!container) {
-    showFeedback('Payment modal not found. Please refresh the page.', 'error');
+    console.error('Payment modal container not found!');
+    alert('Payment modal container not found. Please refresh the page.');
     return;
   }
 
   const subtotal = parseFloat(hourlyRate);
-  const nyTax    = subtotal * 0.0825;
-  const total    = subtotal + nyTax;
+  const nyTax = subtotal * 0.0825;
+  const total = subtotal + nyTax;
 
   const modalHTML = `
     <div class="payment-modal">
@@ -233,7 +237,7 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
           <h2>Complete Payment</h2>
           <button class="close-btn" id="modalCloseBtn">×</button>
         </div>
-
+        
         <div class="payment-body">
           <div class="tutor-info">
             <div class="tutor-avatar">${tutorName.charAt(0).toUpperCase()}</div>
@@ -248,18 +252,22 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
               <span>💰</span>
               <span>Payment Summary</span>
             </div>
+            
             <div class="summary-row">
               <span class="summary-label">Session fee:</span>
               <span class="summary-value">$${subtotal.toFixed(2)}</span>
             </div>
+            
             <div class="summary-row">
               <span class="summary-label">NY State Tax (8.25%):</span>
               <span class="summary-value">$${nyTax.toFixed(2)}</span>
             </div>
+            
             <div class="summary-row">
               <span class="summary-label">Platform fee:</span>
               <span class="summary-value">$0.00</span>
             </div>
+            
             <div class="summary-row summary-total">
               <span class="summary-label">Total:</span>
               <span class="summary-value">$${total.toFixed(2)}</span>
@@ -324,21 +332,46 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
           <div class="card-form active" id="card-form">
             <div class="form-group">
               <label class="form-label">Card Number</label>
-              <input type="text" class="form-input" placeholder="1234 5678 9012 3456" maxlength="19" id="cardNumber">
+              <input 
+                type="text" 
+                class="form-input" 
+                placeholder="1234 5678 9012 3456"
+                maxlength="19"
+                id="cardNumber"
+              >
             </div>
+
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Expiry Date</label>
-                <input type="text" class="form-input" placeholder="MM/YY" maxlength="5" id="expiryDate">
+                <input 
+                  type="text" 
+                  class="form-input" 
+                  placeholder="MM/YY"
+                  maxlength="5"
+                  id="expiryDate"
+                >
               </div>
               <div class="form-group">
                 <label class="form-label">CVC</label>
-                <input type="text" class="form-input" placeholder="123" maxlength="4" id="cvc">
+                <input 
+                  type="text" 
+                  class="form-input" 
+                  placeholder="123"
+                  maxlength="4"
+                  id="cvc"
+                >
               </div>
             </div>
+
             <div class="form-group">
               <label class="form-label">Cardholder Name</label>
-              <input type="text" class="form-input" placeholder="John Doe" id="cardholderName">
+              <input 
+                type="text" 
+                class="form-input" 
+                placeholder="John Doe"
+                id="cardholderName"
+              >
             </div>
           </div>
 
@@ -359,13 +392,17 @@ function openPaymentModal(bookingId, tutorName, hourlyRate) {
       </div>
     </div>
   `;
-
+  
   container.innerHTML = modalHTML;
+  
+  // Initialize modal functionality
   initializePaymentModal(bookingId, total);
 }
 
 function initializePaymentModal(bookingId, total) {
-  // Close button
+  console.log('Initializing payment modal for booking:', bookingId);
+  
+  // Close button functionality
   const closeBtn = document.getElementById('modalCloseBtn');
   if (closeBtn) {
     closeBtn.addEventListener('click', function(e) {
@@ -374,8 +411,8 @@ function initializePaymentModal(bookingId, total) {
       closePaymentModal();
     });
   }
-
-  // Cancel button
+  
+  // Cancel button functionality
   const cancelBtn = document.getElementById('modalCancelBtn');
   if (cancelBtn) {
     cancelBtn.addEventListener('click', function(e) {
@@ -384,24 +421,26 @@ function initializePaymentModal(bookingId, total) {
       closePaymentModal();
     });
   }
-
-  // Pay button
+  
+  // Pay button functionality
   const payBtn = document.getElementById('pay-button');
   if (payBtn) {
     payBtn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
-      const id     = this.getAttribute('data-booking-id');
+      const id = this.getAttribute('data-booking-id');
       const amount = this.getAttribute('data-amount');
       processPayment(parseInt(id), parseFloat(amount));
     });
   }
-
+  
   // Close on overlay click
   const modal = document.querySelector('.payment-modal');
   if (modal) {
     modal.addEventListener('click', function(e) {
-      if (e.target === this) closePaymentModal();
+      if (e.target === this) {
+        closePaymentModal();
+      }
     });
   }
 
@@ -409,9 +448,9 @@ function initializePaymentModal(bookingId, total) {
   const cardNumberInput = document.getElementById('cardNumber');
   if (cardNumberInput) {
     cardNumberInput.addEventListener('input', function(e) {
-      let value          = e.target.value.replace(/\s/g, '');
+      let value = e.target.value.replace(/\s/g, '');
       let formattedValue = value.replace(/(.{4})/g, '$1 ');
-      e.target.value     = formattedValue.trim();
+      e.target.value = formattedValue.trim();
     });
   }
 
@@ -442,10 +481,10 @@ function initializePaymentModal(bookingId, total) {
         option.classList.remove('selected');
       });
       this.closest('.payment-option').classList.add('selected');
-
-      const cardForm  = document.getElementById('card-form');
+      
+      const cardForm = document.getElementById('card-form');
       const payButton = document.getElementById('pay-button');
-
+      
       if (this.value === 'credit-card') {
         cardForm.classList.add('active');
         payButton.innerHTML = `💳 Pay $${total.toFixed(2)}`;
@@ -467,7 +506,7 @@ function initializePaymentModal(bookingId, total) {
   if (defaultSelected) {
     defaultSelected.closest('.payment-option').classList.add('selected');
   }
-
+  
   // ESC key to close
   document.addEventListener('keydown', function escHandler(e) {
     if (e.key === 'Escape') {
@@ -478,46 +517,55 @@ function initializePaymentModal(bookingId, total) {
 }
 
 function closePaymentModal() {
+  console.log('Closing payment modal');
   const modal = document.querySelector('.payment-modal');
   if (modal) {
-    modal.style.opacity    = '0';
+    modal.style.opacity = '0';
     modal.style.transition = 'opacity 0.3s ease';
     setTimeout(() => {
       const container = document.getElementById('payment-modal-container');
-      if (container) container.innerHTML = '';
+      if (container) {
+        container.innerHTML = '';
+      }
     }, 300);
   }
 }
 
-// ── Process payment ───────────────────────────────────────────────────────
-
 async function processPayment(bookingId, amount) {
+  console.log('Processing payment for booking:', bookingId, 'amount:', amount);
+  
   const selectedMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'credit-card';
-  const payBtn         = document.getElementById('pay-button');
-
-  if (!payBtn) return;
-
-  payBtn.disabled = true;
-
-  // Show loading state per payment method
-  if (selectedMethod === 'google-pay') {
-    payBtn.innerHTML = '⏳ Processing Google Pay...';
-  } else if (selectedMethod === 'apple-pay') {
-    payBtn.innerHTML = '⏳ Processing Apple Pay...';
-  } else if (selectedMethod === 'paypal') {
-    payBtn.innerHTML = '⏳ Redirecting to PayPal...';
-  } else {
-    payBtn.innerHTML = '⏳ Processing Card...';
+  const payBtn = document.getElementById('pay-button');
+  
+  if (!payBtn) {
+    console.error('Pay button not found');
+    return;
   }
-
+  
+  // Disable button and show loading
+  payBtn.disabled = true;
+  
   try {
+    if (selectedMethod === 'google-pay') {
+      payBtn.innerHTML = '⏳ Processing Google Pay...';
+    } else if (selectedMethod === 'apple-pay') {
+      payBtn.innerHTML = '⏳ Processing Apple Pay...';
+    } else if (selectedMethod === 'paypal') {
+      payBtn.innerHTML = '⏳ Redirecting to PayPal...';
+    } else {
+      payBtn.innerHTML = '⏳ Processing Card...';
+    }
+
+    // Call payment API
     const response = await fetch('/api/payments/process', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({
-        booking_id:     bookingId,
+        booking_id: bookingId,
         payment_method: {
-          type:  selectedMethod,
+          type: selectedMethod,
           last4: selectedMethod === 'credit-card' ? '4242' : null
         },
         amount: amount
@@ -525,107 +573,28 @@ async function processPayment(bookingId, amount) {
     });
 
     const result = await response.json();
+    console.log('Payment result:', result);
 
     if (result.success) {
-      // Update booking payment status on the server
-      await fetch(`/api/bookings/${bookingId}/payment-success`, { method: 'POST' });
-
+      // Update booking payment status
+      await fetch(`/api/bookings/${bookingId}/payment-success`, {
+        method: 'POST'
+      });
+      
+      alert(`Payment successful! 🎉\nPayment ID: ${result.payment_id}`);
       closePaymentModal();
-
-      // FIX: replaced alert() with showFeedback() for a consistent, non-blocking UI
-      showFeedback(`✅ Payment successful! ID: ${result.payment_id}`, 'success');
-
-      // Reload bookings after a short delay so the user can read the feedback
-      setTimeout(() => window.location.reload(), 2000);
-
+      
+      // Refresh bookings to show payment status
+      window.location.reload();
     } else {
       payBtn.disabled = false;
       payBtn.innerHTML = `💳 Pay $${amount.toFixed(2)}`;
-
-      // FIX: replaced alert() with showFeedback() for a consistent, non-blocking UI
-      showFeedback(`❌ Payment failed: ${result.message || 'Please try again.'}`, 'error');
+      alert(`Payment failed: ${result.message || 'Unknown error'}`);
     }
-
   } catch (error) {
     console.error('Payment error:', error);
-    payBtn.disabled  = false;
+    payBtn.disabled = false;
     payBtn.innerHTML = `💳 Pay $${amount.toFixed(2)}`;
-
-    // FIX: replaced alert() with showFeedback() for a consistent, non-blocking UI
-    showFeedback('❌ Payment processing failed. Please try again.', 'error');
+    alert('Payment processing failed. Please try again.');
   }
 }
-
-// ── Feedback toast ────────────────────────────────────────────────────────
-
-function showFeedback(message, type = 'info') {
-  const existingFeedback = document.getElementById('bookingFeedback');
-  if (existingFeedback) existingFeedback.remove();
-
-  const feedback = document.createElement('div');
-  feedback.id    = 'bookingFeedback';
-
-  feedback.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 14px 20px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    z-index: 10000;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-    transition: all 0.3s ease;
-    max-width: 340px;
-    transform: translateX(0);
-  `;
-
-  feedback.textContent = message;
-
-  if (type === 'success') {
-    feedback.style.background = 'linear-gradient(135deg, #00d4aa, #00b894)';
-    feedback.style.color      = 'white';
-  } else if (type === 'error') {
-    feedback.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
-    feedback.style.color      = 'white';
-  } else {
-    feedback.style.background = 'linear-gradient(135deg, #F76900, #e05e00)';
-    feedback.style.color      = 'white';
-  }
-
-  document.body.appendChild(feedback);
-
-  setTimeout(() => {
-    if (feedback && feedback.parentNode) {
-      feedback.style.opacity = '0';
-      setTimeout(() => {
-        if (feedback && feedback.parentNode) {
-          feedback.parentNode.removeChild(feedback);
-        }
-      }, 300);
-    }
-  }, 3500);
-}
-
-// ── Notification badge ────────────────────────────────────────────────────
-
-function loadNotifBadge() {
-  fetch('/api/notifications/unread-count')
-    .then(r => r.json())
-    .then(data => {
-      const badge = document.getElementById('sidebarBadge');
-      if (!badge) return;
-      if (data.count > 0) {
-        badge.textContent = data.count;
-        badge.classList.remove('hidden');
-      } else {
-        badge.classList.add('hidden');
-      }
-    })
-    .catch(() => {
-      // Silently fail for notification badge
-    });
-}
-
-loadNotifBadge();
-setInterval(loadNotifBadge, 30000);

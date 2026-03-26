@@ -1,7 +1,11 @@
-// ── Dashboard with Personalized Recent Searches ──────────────────────────
+// ── Dashboard — Search with type toggle and course autocomplete ───────────
 
-let currentUser = null;
+let currentUser   = null;
+let searchType    = 'course'; // 'course' | 'tutor' | 'professor'
+let courseCatalog = [];       // loaded once for autocomplete
 const MAX_RECENT_SEARCHES = 5;
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────
 
 fetch('/api/me')
   .then(r => r.json())
@@ -16,114 +20,307 @@ fetch('/api/me')
       if (link) link.style.display = 'flex';
     }
 
-    // Load recent searches for this user
     loadRecentSearches();
   })
   .catch(() => window.location.href = '/');
 
-// Load and display recent searches
+// Load course catalog for autocomplete
+fetch('/api/courses')
+  .then(r => r.json())
+  .then(data => { courseCatalog = data; })
+  .catch(() => { courseCatalog = []; });
+
+// ── Search type toggle ────────────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn   = document.getElementById('searchBtn');
+
+  // Toggle buttons
+  document.querySelectorAll('.search-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.search-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      searchType = btn.dataset.type;
+
+      // Update placeholder based on type
+      const placeholders = {
+        course:    'e.g. CSE 274, Data Structures, Calculus...',
+        tutor:     'e.g. Alex Johnson, Maria Garcia...',
+        professor: 'e.g. Dr. Wills, Prof. Smith...'
+      };
+      searchInput.placeholder = placeholders[searchType];
+
+      // Clear input, autocomplete, and results when switching type
+      searchInput.value = '';
+      clearAutocomplete();
+      document.getElementById('resultsSection').classList.add('hidden');
+      document.getElementById('emptyState').style.display = 'block';
+
+      searchInput.focus();
+    });
+  });
+
+  // Search button
+  searchBtn.addEventListener('click', () => {
+    const query = searchInput.value.trim();
+    if (query) {
+      clearAutocomplete();
+      performSearch(query);
+    }
+  });
+
+  // Enter key
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const query = searchInput.value.trim();
+      if (query) {
+        clearAutocomplete();
+        performSearch(query);
+      }
+    }
+    // Navigate autocomplete with arrow keys
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      navigateAutocomplete(e.key);
+      e.preventDefault();
+    }
+    if (e.key === 'Escape') {
+      clearAutocomplete();
+    }
+  });
+
+  // Autocomplete on input — only for course type
+  searchInput.addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    if (searchType === 'course' && val.length >= 2) {
+      showAutocomplete(val);
+    } else {
+      clearAutocomplete();
+    }
+  });
+
+  // Clear searches button setup
+  const quickChipsContainer = document.querySelector('.quick-chips');
+  const clearButton = document.createElement('button');
+  clearButton.textContent = '🗑️ Clear Recent';
+  clearButton.className   = 'btn-clear-searches';
+  clearButton.addEventListener('click', clearRecentSearches);
+
+  const observer = new MutationObserver(() => {
+    if (quickChipsContainer.children.length > 0 && !quickChipsContainer.querySelector('.btn-clear-searches')) {
+      quickChipsContainer.appendChild(clearButton);
+    }
+  });
+  observer.observe(quickChipsContainer, { childList: true });
+
+  // Close autocomplete when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-bar')) {
+      clearAutocomplete();
+    }
+  });
+});
+
+// ── Autocomplete ──────────────────────────────────────────────────────────
+
+function showAutocomplete(query) {
+  clearAutocomplete();
+
+  const q = query.toLowerCase();
+  const matches = courseCatalog
+    .filter(c =>
+      c.course_code.toLowerCase().includes(q) ||
+      c.course_name.toLowerCase().includes(q)
+    )
+    .slice(0, 8); // max 8 suggestions
+
+  if (matches.length === 0) return;
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'autocomplete-dropdown';
+  dropdown.className = 'autocomplete-dropdown';
+
+  matches.forEach((course, index) => {
+    const item = document.createElement('div');
+    item.className = 'autocomplete-item';
+    item.dataset.index = index;
+
+    // Highlight matching text
+    const codeHighlighted  = highlightMatch(course.course_code, query);
+    const nameHighlighted  = highlightMatch(course.course_name, query);
+
+    item.innerHTML = `
+      <span class="autocomplete-code">${codeHighlighted}</span>
+      <span class="autocomplete-name">${nameHighlighted}</span>
+    `;
+
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // prevent input blur before click
+      document.getElementById('searchInput').value = course.course_code;
+      clearAutocomplete();
+      performSearch(course.course_code);
+    });
+
+    dropdown.appendChild(item);
+  });
+
+  // Insert dropdown right after the search bar
+  const searchBar = document.querySelector('.search-bar');
+  searchBar.style.position = 'relative';
+  searchBar.appendChild(dropdown);
+}
+
+function highlightMatch(text, query) {
+  const index = text.toLowerCase().indexOf(query.toLowerCase());
+  if (index === -1) return text;
+  return (
+    text.substring(0, index) +
+    `<strong>${text.substring(index, index + query.length)}</strong>` +
+    text.substring(index + query.length)
+  );
+}
+
+function clearAutocomplete() {
+  const existing = document.getElementById('autocomplete-dropdown');
+  if (existing) existing.remove();
+}
+
+function navigateAutocomplete(direction) {
+  const dropdown = document.getElementById('autocomplete-dropdown');
+  if (!dropdown) return;
+
+  const items   = dropdown.querySelectorAll('.autocomplete-item');
+  const current = dropdown.querySelector('.autocomplete-item.highlighted');
+  let nextIndex = 0;
+
+  if (current) {
+    const currentIndex = parseInt(current.dataset.index);
+    current.classList.remove('highlighted');
+    nextIndex = direction === 'ArrowDown'
+      ? Math.min(currentIndex + 1, items.length - 1)
+      : Math.max(currentIndex - 1, 0);
+  } else {
+    nextIndex = direction === 'ArrowDown' ? 0 : items.length - 1;
+  }
+
+  items[nextIndex].classList.add('highlighted');
+  document.getElementById('searchInput').value =
+    items[nextIndex].querySelector('.autocomplete-code').textContent;
+}
+
+// ── Recent searches ───────────────────────────────────────────────────────
+
 function loadRecentSearches() {
   if (!currentUser) return;
 
-  const recentSearches = getRecentSearches(currentUser.id);
+  const recentSearches      = getRecentSearches(currentUser.id);
   const quickChipsContainer = document.querySelector('.quick-chips');
-  
+
   if (recentSearches.length === 0) {
-    // Hide the container if no recent searches
     quickChipsContainer.style.display = 'none';
     return;
   }
 
-  // Show container and populate with recent searches
   quickChipsContainer.style.display = 'flex';
   quickChipsContainer.innerHTML = recentSearches
-    .map(search => `<span class="chip recent-search" data-q="${search}">${search}</span>`)
+    .map(s => `<span class="chip recent-search" data-q="${s.query}" data-type="${s.type}">${s.query} <span class="chip-type-label">${s.type}</span></span>`)
     .join('');
 
-  // Add click handlers to recent search chips
   quickChipsContainer.querySelectorAll('.recent-search').forEach(chip => {
     chip.addEventListener('click', () => {
-      const query = chip.getAttribute('data-q');
+      const query    = chip.getAttribute('data-q');
+      const type     = chip.getAttribute('data-type') || 'course';
+
+      // Activate the correct toggle button
+      document.querySelectorAll('.search-type-btn').forEach(b => b.classList.remove('active'));
+      const matchingBtn = document.querySelector(`.search-type-btn[data-type="${type}"]`);
+      if (matchingBtn) matchingBtn.classList.add('active');
+      searchType = type;
+
       document.getElementById('searchInput').value = query;
       performSearch(query);
     });
   });
 }
 
-// Get recent searches for specific user from localStorage
 function getRecentSearches(userId) {
-  const key = `tutormatch_recent_searches_${userId}`;
+  const key     = `tutormatch_recent_searches_${userId}`;
   const searches = localStorage.getItem(key);
   return searches ? JSON.parse(searches) : [];
 }
 
-// Save search to recent searches for specific user
-function saveRecentSearch(userId, query) {
+function saveRecentSearch(userId, query, type) {
   if (!query || query.trim().length < 2) return;
 
   const key = `tutormatch_recent_searches_${userId}`;
   let searches = getRecentSearches(userId);
-  
-  // Remove if already exists (to move to front)
-  searches = searches.filter(s => s.toLowerCase() !== query.toLowerCase());
-  
-  // Add to beginning
-  searches.unshift(query.trim());
-  
-  // Keep only last N searches
+
+  // Remove duplicate
+  searches = searches.filter(s => !(s.query.toLowerCase() === query.toLowerCase() && s.type === type));
+
+  // Add to front
+  searches.unshift({ query: query.trim(), type });
+
+  // Keep max 5
   searches = searches.slice(0, MAX_RECENT_SEARCHES);
-  
-  // Save to localStorage
+
   localStorage.setItem(key, JSON.stringify(searches));
 }
 
-// Clear recent searches for current user
 function clearRecentSearches() {
   if (!currentUser) return;
-  
   const key = `tutormatch_recent_searches_${currentUser.id}`;
   localStorage.removeItem(key);
-  loadRecentSearches(); // Refresh display
+  loadRecentSearches();
 }
 
-// Enhanced search functionality
+// ── Search ────────────────────────────────────────────────────────────────
+
 async function performSearch(query) {
   if (!query || query.trim().length < 2) return;
 
   const trimmedQuery = query.trim();
-  
-  // Save to recent searches
+
   if (currentUser) {
-    saveRecentSearch(currentUser.id, trimmedQuery);
-    loadRecentSearches(); // Refresh recent searches display
+    saveRecentSearch(currentUser.id, trimmedQuery, searchType);
+    loadRecentSearches();
   }
 
   try {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(trimmedQuery)}`);
-    const results = await response.json();
+    // Pass the search type to the API
+    const response = await fetch(`/api/search?q=${encodeURIComponent(trimmedQuery)}&type=${searchType}`);
+    const results  = await response.json();
 
     document.getElementById('emptyState').style.display = 'none';
     const resultsSection = document.getElementById('resultsSection');
     resultsSection.classList.remove('hidden');
 
-    document.getElementById('resultsTitle').textContent = 'Search Results';
-    document.getElementById('resultsCount').textContent = `${results.length} result${results.length !== 1 ? 's' : ''} found`;
+    const typeLabels = {
+      course:    'course',
+      tutor:     'tutor name',
+      professor: 'professor'
+    };
+
+    document.getElementById('resultsTitle').textContent =
+      `Results for "${trimmedQuery}" by ${typeLabels[searchType]}`;
+    document.getElementById('resultsCount').textContent =
+      `${results.length} result${results.length !== 1 ? 's' : ''} found`;
 
     if (results.length === 0) {
       document.getElementById('resultsGrid').innerHTML = `
-        <div style="text-align: center; padding: 40px; color: #666;">
-          <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">🔍</div>
-          <h3 style="color: #000E54; margin-bottom: 8px;">No tutors found</h3>
-          <p>Try searching for a different course code, name, or professor.</p>
+        <div style="text-align:center;padding:40px;color:#666;grid-column:1/-1;">
+          <div style="font-size:3rem;margin-bottom:16px;opacity:0.5;">🔍</div>
+          <h3 style="color:#000E54;margin-bottom:8px;">No tutors found</h3>
+          <p>Try a different search or switch the search type above.</p>
         </div>
       `;
       return;
     }
 
-    const resultsHTML = results.map(tutor => {
-      const avatar = tutor.full_name.charAt(0).toUpperCase();
-      const rating = parseFloat(tutor.avg_rating || 0);
-      const stars = '⭐'.repeat(Math.max(1, Math.round(rating)));
+    document.getElementById('resultsGrid').innerHTML = results.map(tutor => {
+      const avatar  = tutor.full_name.charAt(0).toUpperCase();
+      const rating  = parseFloat(tutor.avg_rating || 0);
+      const stars   = rating > 0 ? '⭐'.repeat(Math.max(1, Math.round(rating))) : '';
       const verified = tutor.is_verified ? '<span class="verified-badge">✓ Verified</span>' : '';
 
       return `
@@ -131,87 +328,33 @@ async function performSearch(query) {
           <div class="tutor-avatar">${avatar}</div>
           <div class="tutor-info">
             <div class="tutor-name">${tutor.full_name}</div>
-            <div class="tutor-course">${tutor.course_code} - ${tutor.course_name}</div>
+            <div class="tutor-course">${tutor.course_code} — ${tutor.course_name}</div>
             <div class="tutor-meta">
-              <span class="tutor-professor">Prof. ${tutor.professor}</span>
+              <span class="tutor-professor">👨‍🏫 Prof. ${tutor.professor}</span>
               <span class="tutor-grade">Grade: ${tutor.grade}</span>
             </div>
-            <div class="tutor-rating">${stars} (${rating.toFixed(1)})</div>
-            <div class="tutor-price">$${tutor.hourly_rate}/hour</div>
+            ${rating > 0 ? `<div class="tutor-rating">${stars} (${rating.toFixed(1)})</div>` : ''}
+            <div class="tutor-price">$${parseFloat(tutor.hourly_rate).toFixed(2)}/hour</div>
             ${verified}
           </div>
         </div>
       `;
     }).join('');
 
-    document.getElementById('resultsGrid').innerHTML = resultsHTML;
   } catch (error) {
     console.error('Search error:', error);
     document.getElementById('resultsGrid').innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #e74c3c;">
-        <div style="font-size: 3rem; margin-bottom: 16px;">⚠️</div>
-        <h3 style="margin-bottom: 8px;">Search Error</h3>
+      <div style="text-align:center;padding:40px;color:#e74c3c;grid-column:1/-1;">
+        <div style="font-size:3rem;margin-bottom:16px;">⚠️</div>
+        <h3 style="margin-bottom:8px;">Search Error</h3>
         <p>Could not perform search. Please try again.</p>
       </div>
     `;
   }
 }
 
-// Search event listeners
-document.addEventListener('DOMContentLoaded', () => {
-  const searchInput = document.getElementById('searchInput');
-  const searchBtn = document.getElementById('searchBtn');
+// ── Notification badge ────────────────────────────────────────────────────
 
-  // Search button click
-  searchBtn.addEventListener('click', () => {
-    const query = searchInput.value.trim();
-    if (query) performSearch(query);
-  });
-
-  // Enter key in search input
-  searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const query = e.target.value.trim();
-      if (query) performSearch(query);
-    }
-  });
-
-  // Add clear searches option (optional)
-  const clearButton = document.createElement('button');
-  clearButton.textContent = '🗑️ Clear Recent';
-  clearButton.className = 'btn-clear-searches';
-  clearButton.style.cssText = `
-    background: none;
-    border: 1px solid #ddd;
-    color: #666;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.7rem;
-    cursor: pointer;
-    margin-left: auto;
-    transition: all 0.2s;
-  `;
-  clearButton.addEventListener('mouseover', () => {
-    clearButton.style.backgroundColor = '#f5f5f5';
-    clearButton.style.borderColor = '#999';
-  });
-  clearButton.addEventListener('mouseout', () => {
-    clearButton.style.backgroundColor = 'transparent';
-    clearButton.style.borderColor = '#ddd';
-  });
-  clearButton.addEventListener('click', clearRecentSearches);
-
-  // Add clear button to quick chips container when there are recent searches
-  const quickChipsContainer = document.querySelector('.quick-chips');
-  const observer = new MutationObserver(() => {
-    if (quickChipsContainer.children.length > 0 && !quickChipsContainer.querySelector('.btn-clear-searches')) {
-      quickChipsContainer.appendChild(clearButton);
-    }
-  });
-  observer.observe(quickChipsContainer, { childList: true });
-});
-
-// ── Notification badge ────────────────────────────────────────────────
 function loadNotifBadge() {
   fetch('/api/notifications/unread-count')
     .then(r => r.json())
@@ -225,9 +368,7 @@ function loadNotifBadge() {
         badge.classList.add('hidden');
       }
     })
-    .catch(() => {
-      // Silently fail for notification badge
-    });
+    .catch(() => {});
 }
 
 loadNotifBadge();

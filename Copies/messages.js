@@ -17,13 +17,13 @@ async function loadCurrentUser() {
     const response = await fetch('/api/me');
     if (response.ok) {
       currentUser = await response.json();
-
+      
       // Update nav display
       document.getElementById('navUserName').textContent = currentUser.full_name;
       const roleEl = document.getElementById('navUserRole');
       if (roleEl) roleEl.textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
-
-      // Show tutor dashboard link if user is tutor
+      
+      // ✅ SHOW TUTOR DASHBOARD LINK IF USER IS TUTOR
       if (currentUser.role === 'tutor') {
         const tutorLink = document.getElementById('tutorDashLink');
         if (tutorLink) tutorLink.style.display = 'flex';
@@ -42,6 +42,7 @@ async function loadConversations() {
     const response = await fetch('/api/conversations');
     if (response.ok) {
       conversations = await response.json();
+      console.log('🔍 Conversations loaded:', conversations); // Debug line
       displayConversations();
     } else {
       console.error('Failed to load conversations');
@@ -55,7 +56,7 @@ async function loadConversations() {
 
 function displayConversations() {
   const container = document.getElementById('conversationsList');
-
+  
   if (!conversations || conversations.length === 0) {
     container.innerHTML = `
       <div style="padding:20px;text-align:center;color:#999;font-size:0.9rem;">
@@ -68,17 +69,17 @@ function displayConversations() {
   }
 
   const conversationsHTML = conversations.map(conv => {
+    // ✅ FIXED: Use other_name directly from API
     const otherPerson = conv.other_name;
-    const lastMessage = conv.last_message ?
-      (conv.last_message.length > 40 ? conv.last_message.substring(0, 40) + '...' : conv.last_message) :
+    const lastMessage = conv.last_message ? 
+      (conv.last_message.length > 40 ? conv.last_message.substring(0, 40) + '...' : conv.last_message) : 
       'No messages yet';
-
+    
     const unreadClass = conv.unread_count > 0 ? 'unread' : '';
     const activeClass = activeConversation === conv.booking_id ? 'active' : '';
 
-    // FIX: pass event as parameter so openConversation() does not rely on global event object
     return `
-      <div class="conversation-item ${unreadClass} ${activeClass}" onclick="openConversation(event, ${conv.booking_id})">
+      <div class="conversation-item ${unreadClass} ${activeClass}" onclick="openConversation(${conv.booking_id})">
         <div class="conversation-avatar">${otherPerson.charAt(0).toUpperCase()}</div>
         <div class="conversation-info">
           <div class="conversation-name">${otherPerson}</div>
@@ -105,13 +106,12 @@ function showEmptyState() {
   `;
 }
 
-// FIX: event is now received as a parameter instead of relying on the global event object
-async function openConversation(event, bookingId) {
+async function openConversation(bookingId) {
   if (activeConversation === bookingId) return;
-
+  
   activeConversation = bookingId;
-
-  // Update UI — remove active from all, add to clicked item
+  
+  // Update UI
   document.querySelectorAll('.conversation-item').forEach(item => {
     item.classList.remove('active');
   });
@@ -123,12 +123,12 @@ async function openConversation(event, bookingId) {
     if (response.ok) {
       const data = await response.json();
       displayChatPanel(data.booking, data.messages);
-
+      
       // Join socket room for real-time updates
       if (socket) {
         socket.emit('join_booking', bookingId);
       }
-
+      
       // Mark as read
       markConversationAsRead(bookingId);
     }
@@ -139,11 +139,11 @@ async function openConversation(event, bookingId) {
 
 function displayChatPanel(booking, messages) {
   const chatPanel = document.getElementById('chatPanel');
-
-  // Get other person name from current conversations list
+  
+  // ✅ FIXED: Get other person name from current conversations list
   const currentConv = conversations.find(c => c.booking_id === activeConversation);
   const otherPerson = currentConv ? currentConv.other_name : 'Unknown User';
-
+  
   chatPanel.innerHTML = `
     <div class="chat-header">
       <div class="chat-avatar">${otherPerson.charAt(0).toUpperCase()}</div>
@@ -175,9 +175,9 @@ function displayChatPanel(booking, messages) {
 
 function renderMessage(msg) {
   const isOwn = msg.sender_id === currentUser.id;
-  const time = new Date(msg.created_at).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit'
+  const time = new Date(msg.created_at).toLocaleTimeString('en-US', { 
+    hour: '2-digit', 
+    minute: '2-digit' 
   });
 
   return `
@@ -204,7 +204,7 @@ function handleKeyDown(e) {
 async function sendMessage() {
   const textarea = document.getElementById('messageInput');
   const content = textarea.value.trim();
-
+  
   if (!content || !activeConversation) return;
 
   try {
@@ -222,7 +222,7 @@ async function sendMessage() {
     if (response.ok) {
       textarea.value = '';
       autoResizeTextarea();
-
+      
       // Add message to chat immediately
       const messagesContainer = document.getElementById('chatMessages');
       const newMessage = {
@@ -232,7 +232,7 @@ async function sendMessage() {
       };
       messagesContainer.innerHTML += renderMessage(newMessage);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
+      
       // Update conversations list
       loadConversations();
     } else {
@@ -250,20 +250,19 @@ async function markConversationAsRead(bookingId) {
     await fetch(`/api/conversations/${bookingId}/read`, {
       method: 'POST'
     });
-
+    
     // Update UI
-    // FIX: selector updated to match new onclick signature with event parameter
-    const convItem = document.querySelector(`[onclick="openConversation(event, ${bookingId})"]`);
+    const convItem = document.querySelector(`[onclick="openConversation(${bookingId})"]`);
     if (convItem) {
       convItem.classList.remove('unread');
       const badge = convItem.querySelector('.unread-badge');
       if (badge) badge.remove();
     }
-
+    
     // Update conversations list
     const conv = conversations.find(c => c.booking_id === bookingId);
     if (conv) conv.unread_count = 0;
-
+    
   } catch (error) {
     console.error('Error marking as read:', error);
   }
@@ -276,7 +275,7 @@ function initializeSocket() {
   }
 
   socket = io();
-
+  
   socket.on('connect', () => {
     console.log('Connected to socket server');
     if (currentUser) {
@@ -293,7 +292,7 @@ function initializeSocket() {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
       }
     }
-
+    
     // Update conversations list
     loadConversations();
   });
@@ -303,8 +302,7 @@ function initializeSocket() {
   });
 }
 
-// ── Utility functions ─────────────────────────────────────────────────────
-
+// Utility functions
 function timeAgo(date) {
   const seconds = Math.floor((new Date() - date) / 1000);
   if (seconds < 60) return 'just now';
@@ -323,7 +321,7 @@ function showFeedback(message, type = 'info') {
   // Remove existing feedback
   const existingFeedback = document.getElementById('feedback');
   if (existingFeedback) existingFeedback.remove();
-
+  
   // Create feedback element
   const feedback = document.createElement('div');
   feedback.id = 'feedback';
@@ -340,6 +338,7 @@ function showFeedback(message, type = 'info') {
     max-width: 300px;
   `;
 
+  // Set message and style
   feedback.textContent = message;
 
   if (type === 'success') {
@@ -368,8 +367,7 @@ function showFeedback(message, type = 'info') {
   }, 3000);
 }
 
-// ── Notification badge ────────────────────────────────────────────────────
-
+// ── Notification badge ────────────────────────────────────────────────
 function loadNotifBadge() {
   fetch('/api/notifications/unread-count')
     .then(r => r.json())

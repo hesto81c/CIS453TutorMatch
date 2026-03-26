@@ -251,32 +251,10 @@ app.post('/api/reset-password', async (req, res) => {
 
 // Search
 app.get('/api/search', async (req, res) => {
-  const q    = req.query.q    || '';
-  const type = req.query.type || 'course'; // 'course' | 'tutor' | 'professor'
-
+  const q = req.query.q || '';
   if (q.length < 2) return res.json([]);
-
   try {
     const like = `%${q}%`;
-
-    // Build the WHERE filter based on search type
-    let whereClause;
-    let params;
-
-    if (type === 'tutor') {
-      // Search by tutor full name only
-      whereClause = 'u.full_name LIKE ?';
-      params = [like];
-    } else if (type === 'professor') {
-      // Search by professor name only
-      whereClause = 'tc.professor LIKE ?';
-      params = [like];
-    } else {
-      // Default: search by course code or course name
-      whereClause = '(tc.course_code LIKE ? OR tc.course_name LIKE ?)';
-      params = [like, like];
-    }
-
     const [rows] = await db.query(`
       SELECT u.id, u.full_name, tp.hourly_rate, tp.is_verified,
              tc.course_code, tc.course_name, tc.professor, tc.grade,
@@ -287,14 +265,12 @@ app.get('/api/search', async (req, res) => {
       LEFT JOIN bookings b ON b.tutor_id = u.id
       LEFT JOIN reviews r ON r.booking_id = b.id
       WHERE u.role = 'tutor'
-        AND ${whereClause}
+        AND (tc.course_code LIKE ? OR tc.course_name LIKE ? OR tc.professor LIKE ?)
       GROUP BY u.id, tc.id
-      ORDER BY tp.is_verified DESC, avg_rating DESC
-    `, params);
-
+      ORDER BY is_verified DESC, avg_rating DESC
+    `, [like, like, like]);
     res.json(rows);
   } catch (err) {
-    console.error('Search error:', err);
     res.status(500).json({ error: 'Search failed' });
   }
 });
@@ -914,61 +890,6 @@ app.post('/api/conversations/:bookingId/read', requireLogin, async (req, res) =>
   } catch (error) {
     console.error('Error marking as read:', error);
     res.status(500).json({ error: 'Could not mark as read' });
-  }
-});
-
-// ── Tutor Resources ──────────────────────────────────────────────────────
-
-// Get all resources for a tutor (public - shown on tutor profile and bookings)
-app.get('/api/tutors/:id/resources', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      'SELECT * FROM tutor_resources WHERE tutor_id = ? ORDER BY created_at DESC',
-      [req.params.id]
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error('Get resources error:', err);
-    res.status(500).json({ error: 'Could not load resources.' });
-  }
-});
-
-// Add a new resource (tutor only)
-app.post('/api/profile/resources', requireLogin, async (req, res) => {
-  const { title, type, url, description } = req.body;
-  if (!title || !type) return res.status(400).json({ error: 'Title and type are required.' });
-
-  // Validate type
-  const validTypes = ['link', 'note', 'file'];
-  if (!validTypes.includes(type)) return res.status(400).json({ error: 'Invalid resource type.' });
-
-  // If type is link, url is required
-  if (type === 'link' && !url) return res.status(400).json({ error: 'URL is required for links.' });
-
-  try {
-    const [result] = await db.query(
-      'INSERT INTO tutor_resources (tutor_id, title, type, url, description) VALUES (?, ?, ?, ?, ?)',
-      [req.session.userId, title, type, url || null, description || null]
-    );
-    res.json({ success: true, id: result.insertId });
-  } catch (err) {
-    console.error('Add resource error:', err);
-    res.status(500).json({ error: 'Could not add resource.' });
-  }
-});
-
-// Delete a resource (tutor only, must own it)
-app.delete('/api/profile/resources/:id', requireLogin, async (req, res) => {
-  try {
-    const [result] = await db.query(
-      'DELETE FROM tutor_resources WHERE id = ? AND tutor_id = ?',
-      [req.params.id, req.session.userId]
-    );
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Resource not found.' });
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Delete resource error:', err);
-    res.status(500).json({ error: 'Could not delete resource.' });
   }
 });
 
