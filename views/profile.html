@@ -9,111 +9,126 @@
   <link rel="stylesheet" href="/css/profile.css">
 </head>
 <body class="app-body">
-  <!-- Top stripe -->
   <div class="top-stripe"></div>
-
-  <!-- Top navigation -->
   <nav class="topnav">
     <div class="topnav-left">
       <button class="mobile-menu-toggle">☰</button>
-      <div class="logo-circle small">
-        <img src="/logo.png" alt="TutorMatch">
-      </div>
+      <div class="logo-circle small"><img src="/logo.png" alt="TutorMatch"></div>
       <div class="nav-brand">
-        <span style="color: white;">Tutor</span><span style="color: #F76900;">Match</span>
+        <span style="color:white;">Tutor</span><span style="color:#F76900;">Match</span>
       </div>
     </div>
     <div class="topnav-right">
       <span class="nav-user">👤 <span id="navUser">Loading...</span></span>
       <span class="nav-role" id="navRole">Student</span>
+      <button class="nav-cart" id="cartBtn" onclick="openCart()" title="Pending Payments">
+        🛒
+        <span class="nav-cart-badge hidden" id="cartBadge">0</span>
+      </button>
       <a href="/logout" class="nav-logout">🚪 Logout</a>
     </div>
   </nav>
-
-  <!-- Mobile sidebar overlay -->
   <div class="mobile-sidebar-overlay"></div>
-
-  <!-- App layout -->
   <div class="app-layout">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <span style="color: white;">Tutor</span><span style="color: #F76900;">Match</span>
+        <span style="color:white;">Tutor</span><span style="color:#F76900;">Match</span>
       </div>
       <nav class="sidebar-nav">
-        <a href="/dashboard" class="sidebar-item">
-          <span class="s-icon">🔍</span> Find a Tutor
-        </a>
-        <a href="/bookings" class="sidebar-item">
-          <span class="s-icon">📅</span> My Bookings
-        </a>
-        <a href="/messages" class="sidebar-item">
-          <span class="s-icon">💬</span> Messages
-        </a>
+        <a href="/dashboard" class="sidebar-item"><span class="s-icon">🔍</span> Find a Tutor</a>
+        <a href="/bookings" class="sidebar-item"><span class="s-icon">📅</span> My Bookings</a>
+        <a href="/messages" class="sidebar-item"><span class="s-icon">💬</span> Messages</a>
         <a href="/notifications" class="sidebar-item">
           <span class="s-icon">🔔</span> Notifications
-          <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+          <span class="notif-badge" id="notifBadge" style="display:none;">0</span>
         </a>
-        <a href="/tutor-dashboard" class="sidebar-item" id="tutorDashboardLink" style="display: none;">
+        <a href="/tutor-dashboard" class="sidebar-item" id="tutorDashboardLink" style="display:none;">
           <span class="s-icon">🎓</span> Tutor Dashboard
         </a>
-        <a href="/profile" class="sidebar-item active">
-          <span class="s-icon">👤</span> My Profile
-        </a>
+        <a href="/profile" class="sidebar-item active"><span class="s-icon">👤</span> My Profile</a>
       </nav>
       <div class="sidebar-footer">
         <p>Syracuse University<br><span>#OrangeNation</span></p>
       </div>
     </aside>
-
-    <!-- Main content -->
     <main class="main-content">
       <div class="profile-page-wrapper">
-        <!-- Profile Header Card -->
+
         <div class="profile-header-card">
-          <div class="profile-big-avatar" id="profileAvatar">U</div>
+          <!-- Avatar with upload overlay -->
+          <div class="profile-avatar-wrap" onclick="document.getElementById('avatarInput').click()" title="Click to change photo">
+            <div class="profile-big-avatar" id="profileAvatar">U</div>
+            <div class="avatar-upload-overlay">
+              <span>📷</span>
+              <span style="font-size:0.65rem;display:block;margin-top:2px;">Change</span>
+            </div>
+          </div>
+          <input type="file" id="avatarInput" accept=".jpg,.jpeg,.png" style="display:none;" onchange="uploadAvatar(this)">
+
           <div class="profile-header-info">
             <h1 id="profileName">Loading...</h1>
             <p id="profileEmail">Loading...</p>
             <p id="profileUniversity">Loading...</p>
             <span class="profile-role-badge" id="profileRole">Loading...</span>
-            <span class="verified-tag" id="verifiedTag" style="display: none;">✓ Verified</span>
+            <span class="verified-tag" id="verifiedTag" style="display:none;">✓ Verified</span>
+            <div id="avatarActions" style="display:none;margin-top:8px;">
+              <button class="btn-remove-avatar" onclick="removeAvatar()">🗑️ Remove photo</button>
+            </div>
           </div>
         </div>
 
-        <!-- Student Info (for students only) -->
         <div class="profile-section" id="studentSection">
           <h2>📚 Student Information</h2>
           <div class="info-grid">
-            <div class="info-item">
-              <label>Full Name</label>
-              <p id="studentName">-</p>
-            </div>
-            <div class="info-item">
-              <label>University</label>
-              <p id="studentUniversity">-</p>
-            </div>
-            <div class="info-item">
-              <label>Email</label>
-              <p id="studentEmail">-</p>
-            </div>
-            <div class="info-item">
-              <label>Role</label>
-              <p id="studentRole">-</p>
-            </div>
+            <div class="info-item"><label>Full Name</label><p id="studentName">-</p></div>
+            <div class="info-item"><label>University</label><p id="studentUniversity">-</p></div>
+            <div class="info-item"><label>Email</label><p id="studentEmail">-</p></div>
+            <div class="info-item"><label>Role</label><p id="studentRole">-</p></div>
           </div>
         </div>
 
-        <!-- Tutor Sections (for tutors only) -->
-        <div id="tutorSections" style="display: none;">
-          
-          <!-- Tutor Profile Section -->
+        <!-- Account Info — editable by both roles -->
+        <div class="profile-section" id="accountSection">
+          <h2>✏️ Edit Account Info</h2>
+          <form class="profile-form" onsubmit="saveBasicInfo(); return false;">
+            <div class="input-group">
+              <label for="editFullName">Full Name</label>
+              <input type="text" id="editFullName" placeholder="Your full name">
+            </div>
+            <div class="input-group">
+              <label for="editEmail">University Email</label>
+              <input type="email" id="editEmail" placeholder="you@syr.edu">
+              <span style="font-size:0.75rem;color:#aaa;margin-top:4px;display:block;">Only .edu emails are accepted</span>
+            </div>
+            <button type="submit" class="btn-save">Save Changes</button>
+          </form>
+        </div>
+
+        <div id="tutorSections" style="display:none;">
+
+          <!-- Account Info for tutors -->
+          <div class="profile-section">
+            <h2>✏️ Edit Account Info</h2>
+            <form class="profile-form" onsubmit="saveBasicInfo(); return false;">
+              <div class="input-group">
+                <label for="editFullName">Full Name</label>
+                <input type="text" id="editFullName" placeholder="Your full name">
+              </div>
+              <div class="input-group">
+                <label for="editEmail">University Email</label>
+                <input type="email" id="editEmail" placeholder="you@syr.edu">
+                <span style="font-size:0.75rem;color:#aaa;margin-top:4px;display:block;">Only .edu emails are accepted</span>
+              </div>
+              <button type="submit" class="btn-save">Save Changes</button>
+            </form>
+          </div>
+
           <div class="profile-section">
             <h2>🎓 Tutor Profile</h2>
             <form class="profile-form" onsubmit="saveTutorProfile(); return false;">
               <div class="input-group">
                 <label for="bioTextarea">Bio</label>
-                <textarea id="bioTextarea" placeholder="Tell students about your tutoring experience, teaching style, and what makes you a great tutor..."></textarea>
+                <textarea id="bioTextarea" placeholder="Tell students about your tutoring experience..."></textarea>
               </div>
               <div class="input-group">
                 <label for="hourlyRateInput">Hourly Rate ($)</label>
@@ -123,19 +138,11 @@
             </form>
           </div>
 
-          <!-- My Courses Section -->
           <div class="profile-section">
             <h2>📖 My Courses</h2>
-            
-            <!-- Existing courses -->
-            <div class="courses-manager" id="userCourses">
-              <!-- Courses will be loaded here -->
-            </div>
-
-            <!-- Add new course form with dropdowns -->
+            <div class="courses-manager" id="userCourses"></div>
             <div class="add-course-form">
               <h3>➕ Add Course</h3>
-              
               <div class="course-form-grid">
                 <div class="input-group">
                   <label for="courseCodeSelect">Course Code</label>
@@ -148,7 +155,6 @@
                   <input type="text" id="courseNameInput" readonly placeholder="Auto-filled when you select a course">
                 </div>
               </div>
-
               <div class="course-form-grid-2">
                 <div class="input-group">
                   <label for="professorSelect">Professor</label>
@@ -163,20 +169,82 @@
                   </select>
                 </div>
               </div>
-
               <button type="button" class="btn-add-course" onclick="addCourse()">Add Course</button>
             </div>
           </div>
+
+          <div class="profile-section">
+            <h2>📎 My Resources</h2>
+            <p style="font-size:0.88rem;color:#888;margin-bottom:18px;margin-top:-8px;">
+              Share links, notes, and files with your students. These appear on your public profile and in confirmed bookings.
+            </p>
+            <div id="resourcesList" class="resources-manager">
+              <p style="color:#aaa;text-align:center;padding:16px;font-size:0.88rem;">Loading resources...</p>
+            </div>
+            <div class="add-resource-form">
+              <h3>➕ Add Resource</h3>
+              <div class="resource-type-selector">
+                <button type="button" class="resource-type-btn active" data-type="link" onclick="selectResourceType('link')">🔗 Link</button>
+                <button type="button" class="resource-type-btn" data-type="note" onclick="selectResourceType('note')">📝 Note</button>
+                <button type="button" class="resource-type-btn" data-type="file" onclick="selectResourceType('file')">📄 File Link</button>
+                <button type="button" class="resource-type-btn" data-type="upload" onclick="selectResourceType('upload')">⬆️ Upload File</button>
+              </div>
+              <div class="resource-form-fields">
+                <div class="input-group">
+                  <label for="resourceTitle">Title *</label>
+                  <input type="text" id="resourceTitle" placeholder="e.g. Week 3 Lecture Notes, Practice Problems...">
+                </div>
+                <div class="input-group" id="resourceUrlGroup">
+                  <label for="resourceUrl" id="resourceUrlLabel">URL *</label>
+                  <input type="url" id="resourceUrl" placeholder="https://drive.google.com/...">
+                  <span style="font-size:0.75rem;color:#aaa;margin-top:4px;display:block;">
+                    Paste a link to Google Drive, Dropbox, YouTube, OneDrive, or any URL
+                  </span>
+                </div>
+
+                <!-- File upload field — shown for upload type -->
+                <div class="input-group" id="resourceFileGroup" style="display:none;">
+                  <label for="resourceFile">File *</label>
+                  <div class="file-upload-area" id="fileUploadArea" onclick="document.getElementById('resourceFile').click()">
+                    <div class="file-upload-icon">📎</div>
+                    <div class="file-upload-text">Click to choose a file or drag & drop here</div>
+                    <div class="file-upload-types">PDF · Word · PowerPoint · Excel · JPG · PNG — max 20 MB</div>
+                    <div class="file-upload-selected hidden" id="fileSelected"></div>
+                  </div>
+                  <input
+                    type="file"
+                    id="resourceFile"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    style="display:none;"
+                    onchange="onFileSelected(this)"
+                  >
+                </div>
+                <div class="input-group">
+                  <label for="resourceDescription">Description <span style="font-weight:400;color:#aaa;">(optional)</span></label>
+                  <textarea id="resourceDescription" placeholder="Brief description of what this resource contains..." style="min-height:70px;"></textarea>
+                </div>
+              </div>
+              <!-- Optional: associate with a specific course -->
+              <div class="input-group" id="resourceCourseGroup">
+                <label for="resourceCourseSelect">Associate with course <span style="font-weight:400;color:#aaa;">(optional)</span></label>
+                <select id="resourceCourseSelect" class="course-dropdown">
+                  <option value="">— No specific course —</option>
+                </select>
+              </div>
+              <input type="hidden" id="resourceCourseId" value="">
+
+              <button type="button" class="btn-add-course" onclick="addResource()" id="btnAddResource">Add Resource</button>
+            </div>
+          </div>
+
         </div>
       </div>
     </main>
   </div>
-
-  <!-- App footer -->
   <footer class="app-footer">
     <p>Syracuse University · <span>TutorMatch</span> · #OrangeNation</p>
   </footer>
-
+  <script src="/js/cart.js"></script>
   <script src="/js/profile.js"></script>
 </body>
 </html>

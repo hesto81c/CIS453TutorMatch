@@ -23,6 +23,10 @@
     <div class="topnav-right">
       <span class="nav-user">👤 <span id="navUserName">...</span></span>
       <span class="nav-role" id="navUserRole"></span>
+      <button class="nav-cart" id="cartBtn" onclick="openCart()" title="Pending Payments">
+        🛒
+        <span class="nav-cart-badge hidden" id="cartBadge">0</span>
+      </button>
       <a href="/logout" class="nav-logout">🚪 Logout</a>
     </div>
   </nav>
@@ -67,7 +71,7 @@
         <h1>Tutor Dashboard</h1>
         <p>Manage your incoming session requests</p>
       </div>
-      <div id="statsRow" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;"></div>
+      <div id="statsRow" style="margin-bottom:24px;"></div>
 
       <div style="margin-bottom:16px;">
         <h2 style="font-size:1.1rem;font-weight:700;color:#000E54;margin-bottom:4px;">⏳ Pending Requests</h2>
@@ -103,6 +107,7 @@
     🍊 <span>#OrangeNation</span> · Syracuse University · tutormatch.syr.edu
   </footer>
 
+  <script src="/js/cart.js"></script>
   <script src="/js/tutor-dashboard.js"></script>
 </body>
 </html>

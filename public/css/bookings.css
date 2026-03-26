@@ -2355,3 +2355,156 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(247,105,0,0.3);
 }
+/* ── Resources inside booking card ──────────────────────────────────────── */
+
+.booking-resources {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed #e0e4ef;
+}
+
+.booking-resources-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #000E54;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.booking-resource-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 12px;
+  background: #f8f9ff;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  border-left: 3px solid rgba(247,105,0,0.4);
+}
+
+.booking-resource-item span {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.booking-resource-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #000E54;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.booking-resource-name a {
+  color: #000E54;
+  text-decoration: none;
+}
+
+.booking-resource-name a:hover {
+  color: #F76900;
+  text-decoration: underline;
+}
+
+.booking-resource-desc {
+  font-size: 0.78rem;
+  color: #888;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* ── Resource type tag (shared) ──────────────────────────────────────────── */
+
+.resource-type-tag {
+  display: inline-block;
+  background: rgba(247,105,0,0.1);
+  color: #F76900;
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Resources on tutor public profile ───────────────────────────────────── */
+
+.resources-public-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resource-public-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f4f6fb;
+  border-radius: 10px;
+  border-left: 4px solid #F76900;
+  transition: box-shadow 0.2s;
+}
+
+.resource-public-item:hover {
+  box-shadow: 0 4px 14px rgba(0,14,84,0.08);
+}
+
+.resource-public-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.resource-public-info { flex: 1; min-width: 0; }
+
+.resource-public-title {
+  font-weight: 700;
+  color: #000E54;
+  font-size: 0.92rem;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.resource-public-title a {
+  color: #000E54;
+  text-decoration: none;
+}
+
+.resource-public-title a:hover {
+  color: #F76900;
+  text-decoration: underline;
+}
+
+.resource-public-desc {
+  font-size: 0.82rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+  .booking-resource-item { padding: 8px 10px; }
+  .resource-public-item  { padding: 12px 14px; }
+}
+
+/* ── #13 Student avatar in tutor dashboard booking cards ─────────────────── */
+.student-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: white;
+  margin-right: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}

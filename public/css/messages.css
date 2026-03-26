@@ -66,6 +66,7 @@
   font-weight: 800;
   color: white;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .conv-info { flex: 1; min-width: 0; }
@@ -597,6 +598,8 @@
   font-weight: bold !important;
   font-size: 1.2rem !important;
   color: white !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
 }
 
 .chat-name {
@@ -632,9 +635,25 @@
   color: white !important;
   font-weight: bold !important;
   transition: all 0.2s ease !important;
+  overflow: hidden !important;
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+  flex-shrink: 0 !important;
 }
 
 .conversation-item:hover .conversation-avatar {
   background: #E55A00 !important;
   transform: scale(1.05) !important;
+}
+/* ── Avatar photo containment — prevents images from overflowing ─────────── */
+.conv-avatar img,
+.conversation-avatar img,
+.chat-avatar img,
+.msg-avatar img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: inherit !important;
+  display: block !important;
 }

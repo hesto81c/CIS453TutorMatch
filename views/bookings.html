@@ -23,6 +23,10 @@
     <div class="topnav-right">
       <span class="nav-user">👤 <span id="navUserName">...</span></span>
       <span class="nav-role" id="navUserRole"></span>
+      <button class="nav-cart" id="cartBtn" onclick="openCart()" title="Pending Payments">
+        🛒
+        <span class="nav-cart-badge hidden" id="cartBadge">0</span>
+      </button>
       <a href="/logout" class="nav-logout">🚪 Logout</a>
     </div>
   </nav>
@@ -85,6 +89,7 @@
   <!-- Payment Modal Container -->
   <div id="payment-modal-container"></div>
 
+  <script src="/js/cart.js"></script>
   <script src="/js/bookings.js"></script>
 </body>
 </html>

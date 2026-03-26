@@ -10,6 +10,7 @@ fetch('/api/me')
   .then(res => res.json())
   .then(user => {
     document.getElementById('navUserName').textContent = user.full_name;
+    if (typeof updateNavPhoto === 'function') updateNavPhoto(user);
     const roleEl = document.getElementById('navUserRole');
     if (roleEl) roleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
     if (user.role === 'tutor') {
@@ -86,6 +87,8 @@ fetch('/api/bookings')
               : ''
             }
           </div>
+          <!-- Resources section — filled async by loadBookingResources() -->
+          <div id="booking-resources-${b.id}" class="booking-resources-section" style="display:none;"></div>
           <div class="booking-right">
             <span class="status-badge ${b.status}">${statusLabel}</span>
             ${canCancel ? `<button class="btn-cancel-booking" onclick="cancelBooking(${b.id})">Cancel</button>` : ''}
@@ -124,6 +127,11 @@ fetch('/api/bookings')
       `;
     }).join('');
 
+    // Load resources for confirmed bookings
+    bookings
+      .filter(b => b.status === 'confirmed' || b.status === 'completed')
+      .forEach(b => loadBookingResources(b.id, b.tutor_id));
+
     document.querySelectorAll('.star-picker').forEach(picker => {
       let selected = 0;
       picker.querySelectorAll('span').forEach(star => {
@@ -141,6 +149,49 @@ fetch('/api/bookings')
     console.error('Bookings error:', err);
     document.getElementById('loadingState').textContent = 'Could not load bookings.';
   });
+
+// ── Load tutor resources for a confirmed booking ──────────────────────────
+
+async function loadBookingResources(bookingId, tutorId) {
+  try {
+    const response = await fetch(`/api/tutors/${tutorId}/resources`);
+    if (!response.ok) return;
+    const resources = await response.json();
+    if (!resources || resources.length === 0) return;
+
+    const typeIcons  = { link: '🔗', note: '📝', file: '📄' };
+    const typeLabels = { link: 'Link', note: 'Note', file: 'File' };
+
+    const card = document.getElementById(`booking-${bookingId}`);
+    if (!card) return;
+
+    const resourcesHTML = `
+      <div class="booking-resources">
+        <div class="booking-resources-title">📎 Resources from your tutor</div>
+        ${resources.map(r => `
+          <div class="booking-resource-item">
+            <span>${typeIcons[r.type] || '📎'}</span>
+            <div>
+              <div class="booking-resource-name">
+                ${r.url
+                  ? `<a href="${r.url}" target="_blank" rel="noopener noreferrer">${r.title}</a>`
+                  : r.title
+                }
+                <span class="resource-type-tag">${typeLabels[r.type] || r.type}</span>
+              </div>
+              ${r.description ? `<div class="booking-resource-desc">${r.description}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    const bookingInfo = card.querySelector('.booking-info');
+    if (bookingInfo) bookingInfo.insertAdjacentHTML('beforeend', resourcesHTML);
+  } catch (err) {
+    console.error('Error loading booking resources:', err);
+  }
+}
 
 // ── Star picker ───────────────────────────────────────────────────────────
 
@@ -553,6 +604,45 @@ async function processPayment(bookingId, amount) {
 
     // FIX: replaced alert() with showFeedback() for a consistent, non-blocking UI
     showFeedback('❌ Payment processing failed. Please try again.', 'error');
+  }
+}
+
+// ── Load tutor resources for a booking ───────────────────────────────────
+
+async function loadBookingResources(bookingId, tutorId) {
+  try {
+    const response = await fetch(`/api/tutors/${tutorId}/resources`);
+    if (!response.ok) return;
+    const resources = await response.json();
+
+    const container = document.getElementById(`booking-resources-${bookingId}`);
+    if (!container) return;
+    if (!resources || resources.length === 0) return;
+
+    const resourceIcons  = { link: '🔗', note: '📝', file: '📄' };
+    const resourceLabels = { link: 'Link', note: 'Note', file: 'File' };
+
+    container.style.display = 'block';
+    container.innerHTML = `
+      <div class="booking-resources-header">📎 Tutor Resources</div>
+      ${resources.map(r => `
+        <div class="booking-resource-item">
+          <span class="booking-resource-icon">${resourceIcons[r.type] || '📎'}</span>
+          <div class="booking-resource-info">
+            <div class="booking-resource-title">
+              ${r.url
+                ? `<a href="${r.url}" target="_blank" rel="noopener noreferrer">${r.title}</a>`
+                : r.title
+              }
+              <span class="resource-type-badge">${resourceLabels[r.type] || r.type}</span>
+            </div>
+            ${r.description ? `<div class="booking-resource-desc">${r.description}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    `;
+  } catch (err) {
+    console.error('Error loading booking resources:', err);
   }
 }
 

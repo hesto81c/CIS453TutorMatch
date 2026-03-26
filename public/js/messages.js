@@ -1,9 +1,11 @@
 // ── Messages/Chat System ────────────────────────────────────────────────
 
-let currentUser = null;
-let socket = null;
+let currentUser        = null;
+let socket             = null;
 let activeConversation = null;
-let conversations = [];
+let conversations      = [];
+let typingTimer        = null;  // #6 debounce timer
+const TYPING_DELAY     = 1500;  // ms before typing_stop is emitted
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async function() {
@@ -20,6 +22,7 @@ async function loadCurrentUser() {
 
       // Update nav display
       document.getElementById('navUserName').textContent = currentUser.full_name;
+    if (typeof updateNavPhoto === 'function') updateNavPhoto(currentUser);
       const roleEl = document.getElementById('navUserRole');
       if (roleEl) roleEl.textContent = currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
 
@@ -79,7 +82,7 @@ function displayConversations() {
     // FIX: pass event as parameter so openConversation() does not rely on global event object
     return `
       <div class="conversation-item ${unreadClass} ${activeClass}" onclick="openConversation(event, ${conv.booking_id})">
-        <div class="conversation-avatar">${otherPerson.charAt(0).toUpperCase()}</div>
+        <div class="conversation-avatar" style="${!conv.other_avatar_url && typeof getAvatarStyle === 'function' ? getAvatarStyle(conv.other_id) : ''}">${typeof getAvatarHTML === 'function' ? getAvatarHTML({id: conv.other_id, full_name: otherPerson, avatar_url: conv.other_avatar_url}) : otherPerson.charAt(0).toUpperCase()}</div>
         <div class="conversation-info">
           <div class="conversation-name">${otherPerson}</div>
           <div class="conversation-course">${conv.course_code}</div>
@@ -109,6 +112,7 @@ function showEmptyState() {
 async function openConversation(event, bookingId) {
   if (activeConversation === bookingId) return;
 
+  stopTyping(); // #6 — stop typing when switching conversation
   activeConversation = bookingId;
 
   // Update UI — remove active from all, add to clicked item
@@ -146,7 +150,7 @@ function displayChatPanel(booking, messages) {
 
   chatPanel.innerHTML = `
     <div class="chat-header">
-      <div class="chat-avatar">${otherPerson.charAt(0).toUpperCase()}</div>
+      <div class="chat-avatar" style="${currentConv && !currentConv.other_avatar_url && typeof getAvatarStyle === 'function' ? getAvatarStyle(currentConv.other_id) : ''}">${typeof getAvatarHTML === 'function' ? getAvatarHTML({id: currentConv ? currentConv.other_id : 0, full_name: otherPerson, avatar_url: currentConv ? currentConv.other_avatar_url : null}) : otherPerson.charAt(0).toUpperCase()}</div>
       <div class="chat-info">
         <div class="chat-name">${otherPerson}</div>
         <div class="chat-course">${booking.course_code} • ${booking.status}</div>
@@ -155,6 +159,7 @@ function displayChatPanel(booking, messages) {
     <div class="chat-messages" id="chatMessages">
       ${messages.map(msg => renderMessage(msg)).join('')}
     </div>
+    <div class="typing-indicator" id="typingIndicator" style="opacity:0;transition:opacity 0.3s ease;"></div>
     <div class="chat-input-area">
       <div class="chat-input-container">
         <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
@@ -175,14 +180,18 @@ function displayChatPanel(booking, messages) {
 
 function renderMessage(msg) {
   const isOwn = msg.sender_id === currentUser.id;
-  const time = new Date(msg.created_at).toLocaleTimeString('en-US', {
+  const time  = new Date(msg.created_at).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit'
   });
+  // #13 — color own messages orange, others get their unique color
+  const bubbleStyle = !isOwn && typeof getAvatarStyle === 'function'
+    ? 'background:' + (getAvatarColors ? getAvatarColors(msg.sender_id)[0] : '#000E54') + ';color:white;'
+    : '';
 
   return `
     <div class="message ${isOwn ? 'own' : 'other'}">
-      <div class="message-content">${escapeHtml(msg.content)}</div>
+      <div class="message-content" style="${bubbleStyle}">${escapeHtml(msg.content)}</div>
       <div class="message-time">${time}</div>
     </div>
   `;
@@ -197,7 +206,28 @@ function autoResizeTextarea() {
 function handleKeyDown(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
+    stopTyping();   // #6 — clear typing indicator before sending
     sendMessage();
+    return;
+  }
+
+  // #6 — emit typing_start on any other key
+  if (socket && activeConversation && currentUser) {
+    socket.emit('typing_start', {
+      booking_id:  activeConversation,
+      sender_name: currentUser.full_name
+    });
+
+    // Debounce: emit typing_stop after TYPING_DELAY ms of inactivity
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(stopTyping, TYPING_DELAY);
+  }
+}
+
+function stopTyping() {
+  clearTimeout(typingTimer);
+  if (socket && activeConversation) {
+    socket.emit('typing_stop', { booking_id: activeConversation });
   }
 }
 
@@ -206,6 +236,8 @@ async function sendMessage() {
   const content = textarea.value.trim();
 
   if (!content || !activeConversation) return;
+
+  stopTyping(); // #6 — clear typing indicator immediately on send
 
   try {
     const response = await fetch('/api/conversations/send', {
@@ -296,6 +328,27 @@ function initializeSocket() {
 
     // Update conversations list
     loadConversations();
+  });
+
+  // #6 — Typing indicators
+  socket.on('user_typing', (data) => {
+    if (data.booking_id !== activeConversation) return;
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) {
+      indicator.textContent = data.name + ' is typing...';
+      indicator.style.opacity = '1';
+    }
+  });
+
+  socket.on('user_stopped_typing', (data) => {
+    if (data.booking_id !== activeConversation) return;
+    const indicator = document.getElementById('typingIndicator');
+    if (indicator) {
+      indicator.style.opacity = '0';
+      setTimeout(function() {
+        if (indicator) indicator.textContent = '';
+      }, 300);
+    }
   });
 
   socket.on('disconnect', () => {

@@ -12,6 +12,7 @@ fetch('/api/me')
   .then(user => {
     currentUser = user;
     document.getElementById('navUserName').textContent = user.full_name;
+    if (typeof updateNavPhoto === 'function') updateNavPhoto(user);
     const roleEl = document.getElementById('navUserRole');
     if (roleEl) roleEl.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
 
@@ -119,6 +120,20 @@ document.addEventListener('DOMContentLoaded', () => {
       clearAutocomplete();
     }
   });
+
+  // #12 — Price filter: re-run search when price inputs change
+  const priceMin = document.getElementById('priceMin');
+  const priceMax = document.getElementById('priceMax');
+
+  function onPriceChange() {
+    updatePriceLabel();
+    // Only re-search if there's already a query
+    const query = document.getElementById('searchInput').value.trim();
+    if (query.length >= 2) performSearch(query);
+  }
+
+  if (priceMin) priceMin.addEventListener('change', onPriceChange);
+  if (priceMax) priceMax.addEventListener('change', onPriceChange);
 });
 
 // ── Autocomplete ──────────────────────────────────────────────────────────
@@ -244,9 +259,24 @@ function loadRecentSearches() {
 }
 
 function getRecentSearches(userId) {
-  const key     = `tutormatch_recent_searches_${userId}`;
-  const searches = localStorage.getItem(key);
-  return searches ? JSON.parse(searches) : [];
+  const key = `tutormatch_recent_searches_${userId}`;
+  try {
+    const searches = localStorage.getItem(key);
+    if (!searches) return [];
+    const parsed = JSON.parse(searches);
+    // Filter out any malformed entries (old format or missing fields)
+    const valid = parsed.filter(function(s) {
+      return s && typeof s === 'object' && typeof s.query === 'string' && s.query.length > 0;
+    });
+    // If all entries were invalid, clear the key
+    if (valid.length !== parsed.length) {
+      localStorage.setItem(key, JSON.stringify(valid));
+    }
+    return valid;
+  } catch {
+    localStorage.removeItem(`tutormatch_recent_searches_${userId}`);
+    return [];
+  }
 }
 
 function saveRecentSearch(userId, query, type) {
@@ -274,6 +304,79 @@ function clearRecentSearches() {
   loadRecentSearches();
 }
 
+// ── #12 Price filter helpers ─────────────────────────────────────────────
+
+function getPriceParams() {
+  const minVal = document.getElementById('priceMin')?.value;
+  const maxVal = document.getElementById('priceMax')?.value;
+  const min = minVal && minVal !== '' ? (parseFloat(minVal) || 0) : 0;
+  const max = maxVal && maxVal !== '' ? (parseFloat(maxVal) || 0) : 0;
+  return { min, max };
+}
+
+function updatePriceLabel() {
+  const { min, max } = getPriceParams();
+  const label  = document.getElementById('priceRangeLabel');
+  const clearBtn = document.getElementById('btnClearPrice');
+  if (!label) return;
+
+  if (!min && !max) {
+    label.textContent = 'Any price';
+    label.style.color = '#aaa';
+    if (clearBtn) clearBtn.classList.add('hidden');
+  } else if (min && !max) {
+    label.textContent = 'From $' + min + '/hr';
+    label.style.color = '#F76900';
+    if (clearBtn) clearBtn.classList.remove('hidden');
+  } else if (!min && max) {
+    label.textContent = 'Up to $' + max + '/hr';
+    label.style.color = '#F76900';
+    if (clearBtn) clearBtn.classList.remove('hidden');
+  } else {
+    label.textContent = '$' + min + ' – $' + max + '/hr';
+    label.style.color = '#F76900';
+    if (clearBtn) clearBtn.classList.remove('hidden');
+  }
+
+  // Highlight active quick-select button
+  document.querySelectorAll('.price-quick-btn').forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+}
+
+function setPriceRange(min, max) {
+  const minInput = document.getElementById('priceMin');
+  const maxInput = document.getElementById('priceMax');
+  if (minInput) minInput.value = min || '';
+  if (maxInput) maxInput.value = max >= 999 ? '' : max;
+
+  // Highlight the clicked button
+  document.querySelectorAll('.price-quick-btn').forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+  event.target.classList.add('active');
+
+  updatePriceLabel();
+
+  // Re-run search if there's already a query
+  const query = document.getElementById('searchInput').value.trim();
+  if (query.length >= 2) performSearch(query);
+}
+
+function clearPriceFilter() {
+  const minInput = document.getElementById('priceMin');
+  const maxInput = document.getElementById('priceMax');
+  if (minInput) minInput.value = '';
+  if (maxInput) maxInput.value = '';
+  document.querySelectorAll('.price-quick-btn').forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+  updatePriceLabel();
+
+  const query = document.getElementById('searchInput').value.trim();
+  if (query.length >= 2) performSearch(query);
+}
+
 // ── Search ────────────────────────────────────────────────────────────────
 
 async function performSearch(query) {
@@ -288,7 +391,13 @@ async function performSearch(query) {
 
   try {
     // Pass the search type to the API
-    const response = await fetch(`/api/search?q=${encodeURIComponent(trimmedQuery)}&type=${searchType}`);
+    // #12 — Include price filter in search
+    const { min, max } = getPriceParams();
+    let url = `/api/search?q=${encodeURIComponent(trimmedQuery)}&type=${searchType}`;
+    if (min) url += '&min=' + min;
+    if (max) url += '&max=' + max;
+
+    const response = await fetch(url);
     const results  = await response.json();
 
     document.getElementById('emptyState').style.display = 'none';
@@ -318,14 +427,19 @@ async function performSearch(query) {
     }
 
     document.getElementById('resultsGrid').innerHTML = results.map(tutor => {
-      const avatar  = tutor.full_name.charAt(0).toUpperCase();
-      const rating  = parseFloat(tutor.avg_rating || 0);
-      const stars   = rating > 0 ? '⭐'.repeat(Math.max(1, Math.round(rating))) : '';
+      const rating   = parseFloat(tutor.avg_rating || 0);
+      const stars    = rating > 0 ? '⭐'.repeat(Math.max(1, Math.round(rating))) : '';
       const verified = tutor.is_verified ? '<span class="verified-badge">✓ Verified</span>' : '';
+      // Avatar: photo if available, else colored initial
+      const avatarContent = typeof getAvatarHTML === 'function'
+        ? getAvatarHTML(tutor)
+        : tutor.full_name.charAt(0).toUpperCase();
+      const avatarStyle = !tutor.avatar_url && typeof getAvatarStyle === 'function'
+        ? getAvatarStyle(tutor.id) : '';
 
       return `
         <div class="tutor-card" onclick="window.location.href='/tutor/${tutor.id}'">
-          <div class="tutor-avatar">${avatar}</div>
+          <div class="tutor-avatar" style="${avatarStyle}">${avatarContent}</div>
           <div class="tutor-info">
             <div class="tutor-name">${tutor.full_name}</div>
             <div class="tutor-course">${tutor.course_code} — ${tutor.course_name}</div>

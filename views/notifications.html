@@ -22,6 +22,10 @@
     <div class="topnav-right">
       <span class="nav-user">👤 <span id="navUserName">...</span></span>
       <span class="nav-role" id="navUserRole"></span>
+      <button class="nav-cart" id="cartBtn" onclick="openCart()" title="Pending Payments">
+        🛒
+        <span class="nav-cart-badge hidden" id="cartBadge">0</span>
+      </button>
       <a href="/logout" class="nav-logout">🚪 Logout</a>
     </div>
   </nav>
@@ -89,6 +93,7 @@
   </footer>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/cart.js"></script>
   <script src="/js/notifications.js"></script>
 </body>
 </html>

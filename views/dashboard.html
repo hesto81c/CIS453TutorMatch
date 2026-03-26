@@ -23,6 +23,10 @@
     <div class="topnav-right">
       <span class="nav-user">👤 <span id="navUserName">...</span></span>
       <span class="nav-role" id="navUserRole"></span>
+      <button class="nav-cart" id="cartBtn" onclick="openCart()" title="Pending Payments">
+        🛒
+        <span class="nav-cart-badge hidden" id="cartBadge">0</span>
+      </button>
       <a href="/logout" class="nav-logout">🚪 Logout</a>
     </div>
   </nav>
@@ -72,6 +76,40 @@
             autocomplete="off" />
           <button id="searchBtn" class="btn-search">Search</button>
         </div>
+        <!-- #12 Price filter -->
+        <div class="price-filter">
+          <div class="price-filter-header">
+            <span class="price-filter-label">💵 Price per hour</span>
+            <span class="price-filter-range" id="priceRangeLabel">Any price</span>
+          </div>
+          <div class="price-filter-inputs">
+            <div class="price-input-group">
+              <label>Min</label>
+              <div class="price-input-wrap">
+                <span class="price-currency">$</span>
+                <input type="number" id="priceMin" placeholder="0" min="0" max="500" value="">
+              </div>
+            </div>
+            <div class="price-filter-divider">—</div>
+            <div class="price-input-group">
+              <label>Max</label>
+              <div class="price-input-wrap">
+                <span class="price-currency">$</span>
+                <input type="number" id="priceMax" placeholder="Any" min="0" max="500" value="">
+              </div>
+            </div>
+            <button class="btn-clear-price hidden" id="btnClearPrice" onclick="clearPriceFilter()">
+              Clear
+            </button>
+          </div>
+          <div class="price-quick-select">
+            <button class="price-quick-btn" onclick="setPriceRange(0, 25)">Under $25</button>
+            <button class="price-quick-btn" onclick="setPriceRange(25, 50)">$25–$50</button>
+            <button class="price-quick-btn" onclick="setPriceRange(50, 100)">$50–$100</button>
+            <button class="price-quick-btn" onclick="setPriceRange(100, 999)">$100+</button>
+          </div>
+        </div>
+
         <div class="quick-chips">
           <!-- Recent searches will be populated here dynamically -->
         </div>
@@ -97,6 +135,7 @@
     🍊 <span>#OrangeNation</span> · Syracuse University · tutormatch.syr.edu
   </footer>
 
+  <script src="/js/cart.js"></script>
   <script src="/js/dashboard.js"></script>
 </body>
 </html>
